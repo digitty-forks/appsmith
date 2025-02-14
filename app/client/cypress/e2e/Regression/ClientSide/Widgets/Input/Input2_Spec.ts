@@ -13,7 +13,7 @@ import EditorNavigation, {
 
 describe(
   "InputV2 widget tests",
-  { tags: ["@tag.Widget", "@tag.Input"] },
+  { tags: ["@tag.Widget", "@tag.Input", "@tag.Binding"] },
   function () {
     let testcases,
       multilineData = `[
@@ -31,7 +31,7 @@ describe(
     }
   ]`;
     before(() => {
-      entityExplorer.DragNDropWidget(draggableWidgets.INPUT_V2);
+      entityExplorer.DragDropWidgetNVerify(draggableWidgets.INPUT_V2);
     });
 
     it("1. Data Type - Single Line Text", function () {

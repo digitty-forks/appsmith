@@ -1,8 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import styles from "./styles.module.css";
-import { Tab, TabPanel, Tabs, TabsList } from "design-system";
+import { Tab, TabPanel, Tabs, TabsList } from "@appsmith/ads";
 import type { ContentProps } from "../../CodeEditors/types";
 import useLocalStorageState from "utils/hooks/useLocalStorageState";
+import classNames from "classnames";
+import { useFeatureFlag } from "utils/hooks/useFeatureFlag";
+import { FEATURE_FLAG } from "ee/entities/FeatureFlag";
+import { CUSTOM_WIDGET_BUILDER_TABS } from "../../../constants";
 
 interface Props {
   tabs: Array<{
@@ -17,10 +21,22 @@ const LOCAL_STORAGE_KEYS = "custom-widget-layout-tabs-state";
 export default function TabLayout(props: Props) {
   const { tabs } = props;
 
+  const isDefaultAITab = useFeatureFlag(
+    FEATURE_FLAG.release_custom_widget_ai_builder,
+  );
+
   const [selectedTab, setSelectedTab] = useLocalStorageState<string>(
     LOCAL_STORAGE_KEYS,
-    tabs[0].title,
+    isDefaultAITab
+      ? CUSTOM_WIDGET_BUILDER_TABS.AI
+      : CUSTOM_WIDGET_BUILDER_TABS.JS,
   );
+
+  useEffect(() => {
+    if (!tabs.find((d) => d.title === selectedTab)) {
+      setSelectedTab(tabs[0].title);
+    }
+  }, []);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -65,7 +81,7 @@ export default function TabLayout(props: Props) {
           onValueChange={(tab: string) => {
             /*
              * We need this set timeout to let the editor blur event fire before changin the tab
-             *  to avoid the editor from saving the last cursor position
+             *  to let the editor save the last cursor position
              */
             setTimeout(() => {
               setSelectedTab(tab);
@@ -82,7 +98,10 @@ export default function TabLayout(props: Props) {
           </TabsList>
           {tabs.map((tab) => (
             <TabPanel
-              className={styles.tabPanel}
+              className={classNames(styles.tabPanel, {
+                "data-[state=inactive]:hidden": selectedTab !== tab.title,
+              })}
+              forceMount
               key={tab.title}
               value={tab.title}
             >

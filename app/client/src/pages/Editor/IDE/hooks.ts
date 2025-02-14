@@ -1,26 +1,37 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   EditorEntityTab,
   EditorEntityTabState,
-  EditorState,
-  EditorViewMode,
-} from "@appsmith/entities/IDE/constants";
+} from "IDE/Interfaces/EditorTypes";
 import { useLocation } from "react-router";
 import { FocusEntity, identifyEntityFromPath } from "navigation/FocusEntity";
-import { useSelector } from "react-redux";
-import { getIDEViewMode, getIsSideBySideEnabled } from "selectors/ideSelectors";
-import { getPropertyPaneWidth } from "selectors/propertyPaneSelectors";
-
-export const useCurrentAppState = () => {
-  const [appState, setAppState] = useState(EditorState.EDITOR);
-  const { pathname } = useLocation();
-  const entityInfo = identifyEntityFromPath(pathname);
-  useEffect(() => {
-    setAppState(entityInfo.appState);
-  }, [entityInfo.appState]);
-
-  return appState;
-};
+import { useDispatch, useSelector } from "react-redux";
+import history, { NavigationMethod } from "utils/history";
+import {
+  builderURL,
+  jsCollectionListURL,
+  queryListURL,
+  widgetListURL,
+} from "ee/RouteBuilder";
+import { getCurrentFocusInfo } from "selectors/focusHistorySelectors";
+import { getIsAltFocusWidget, getWidgetSelectionBlock } from "selectors/ui";
+import { altFocusWidget, setWidgetSelectionBlock } from "actions/widgetActions";
+import { useJSAdd } from "ee/pages/Editor/IDE/EditorPane/JS/hooks";
+import { useQueryAdd } from "ee/pages/Editor/IDE/EditorPane/Query/hooks";
+import { TabSelectors } from "./EditorTabs/constants";
+import { createPageFocusInfoKey } from "ee/navigation/FocusStrategy/AppIDEFocusStrategy";
+import { FocusElement } from "navigation/FocusElements";
+import { closeJSActionTab } from "actions/jsActionActions";
+import { closeQueryActionTab } from "actions/pluginActionActions";
+import { getCurrentBasePageId } from "selectors/editorSelectors";
+import { getCurrentEntityInfo } from "../utils";
+import { useGitCurrentBranch } from "../gitSync/hooks/modHooks";
+import { useParentEntityInfo } from "ee/IDE/hooks/useParentEntityInfo";
+import { useBoolean } from "usehooks-ts";
+import { isWidgetActionConnectionPresent } from "selectors/onboardingSelectors";
+import localStorage, { LOCAL_STORAGE_KEYS } from "utils/localStorage";
+import { getIDETypeByUrl } from "ee/entities/IDE/utils";
+import type { EntityItem } from "ee/IDE/Interfaces/EntityItem";
 
 export const useCurrentEditorState = () => {
   const [selectedSegment, setSelectedSegment] = useState<EditorEntityTab>(
@@ -36,46 +47,11 @@ export const useCurrentEditorState = () => {
    *
    */
   useEffect(() => {
-    const currentEntityInfo = identifyEntityFromPath(location.pathname);
-    switch (currentEntityInfo.entity) {
-      case FocusEntity.QUERY:
-      case FocusEntity.API:
-        setSelectedSegment(EditorEntityTab.QUERIES);
-        setSelectedSegmentState(EditorEntityTabState.Edit);
-        break;
-      case FocusEntity.QUERY_LIST:
-        setSelectedSegment(EditorEntityTab.QUERIES);
-        setSelectedSegmentState(EditorEntityTabState.List);
-        break;
-      case FocusEntity.QUERY_ADD:
-        setSelectedSegment(EditorEntityTab.QUERIES);
-        setSelectedSegmentState(EditorEntityTabState.Add);
-        break;
-      case FocusEntity.JS_OBJECT:
-        setSelectedSegment(EditorEntityTab.JS);
-        setSelectedSegmentState(EditorEntityTabState.Edit);
-        break;
-      case FocusEntity.JS_OBJECT_LIST:
-        setSelectedSegment(EditorEntityTab.JS);
-        setSelectedSegmentState(EditorEntityTabState.List);
-        break;
-      case FocusEntity.CANVAS:
-        setSelectedSegment(EditorEntityTab.UI);
-        setSelectedSegmentState(EditorEntityTabState.Add);
-        break;
-      case FocusEntity.PROPERTY_PANE:
-        setSelectedSegment(EditorEntityTab.UI);
-        setSelectedSegmentState(EditorEntityTabState.Edit);
-        break;
-      case FocusEntity.WIDGET_LIST:
-        setSelectedSegment(EditorEntityTab.UI);
-        setSelectedSegmentState(EditorEntityTabState.List);
-        break;
-      default:
-        setSelectedSegment(EditorEntityTab.UI);
-        setSelectedSegmentState(EditorEntityTabState.Add);
-        break;
-    }
+    const { entity } = identifyEntityFromPath(location.pathname);
+    const { segment, segmentMode } = getCurrentEntityInfo(entity);
+
+    setSelectedSegment(segment);
+    setSelectedSegmentState(segmentMode);
   }, [location.pathname]);
 
   return {
@@ -84,23 +60,166 @@ export const useCurrentEditorState = () => {
   };
 };
 
-export const useEditorPaneWidth = (): number => {
-  const [width, setWidth] = useState(255);
-  const isSideBySideEnabled = useSelector(getIsSideBySideEnabled);
-  const editorMode = useSelector(getIDEViewMode);
-  const { segment } = useCurrentEditorState();
-  const propertyPaneWidth = useSelector(getPropertyPaneWidth);
-  useEffect(() => {
-    if (
-      isSideBySideEnabled &&
-      editorMode === EditorViewMode.SplitScreen &&
-      segment !== EditorEntityTab.UI
-    ) {
-      setWidth(255 + propertyPaneWidth);
-    } else {
-      setWidth(255);
-    }
-  }, [isSideBySideEnabled, editorMode, segment, propertyPaneWidth]);
+export const useSegmentNavigation = (): {
+  onSegmentChange: (value: string) => void;
+} => {
+  const ideType = getIDETypeByUrl(location.pathname);
+  const { parentEntityId: baseParentEntityId } = useParentEntityInfo(ideType);
 
-  return width;
+  /**
+   * Callback to handle the segment change
+   *
+   * @param value
+   * @returns
+   *
+   */
+  const onSegmentChange = (value: string) => {
+    switch (value) {
+      case EditorEntityTab.QUERIES:
+        history.push(queryListURL({ baseParentEntityId }), {
+          invokedBy: NavigationMethod.SegmentControl,
+        });
+        break;
+      case EditorEntityTab.JS:
+        history.push(jsCollectionListURL({ baseParentEntityId }), {
+          invokedBy: NavigationMethod.SegmentControl,
+        });
+        break;
+      case EditorEntityTab.UI:
+        history.push(widgetListURL({ baseParentEntityId }), {
+          invokedBy: NavigationMethod.SegmentControl,
+        });
+        break;
+    }
+  };
+
+  return { onSegmentChange };
+};
+
+export const useGetPageFocusUrl = (basePageId: string): string => {
+  const [focusPageUrl, setFocusPageUrl] = useState(builderURL({ basePageId }));
+
+  const branch = useGitCurrentBranch();
+
+  const pageStateFocusInfo = useSelector((appState) =>
+    getCurrentFocusInfo(appState, createPageFocusInfoKey(basePageId, branch)),
+  );
+
+  useEffect(
+    function handleUpdateOfPageLink() {
+      if (pageStateFocusInfo) {
+        const lastSelectedEntity =
+          pageStateFocusInfo.state[FocusElement.SelectedEntity];
+
+        setFocusPageUrl(builderURL({ basePageId, suffix: lastSelectedEntity }));
+      }
+    },
+    [pageStateFocusInfo, branch, basePageId],
+  );
+
+  return focusPageUrl;
+};
+
+export function useWidgetSelectionBlockListener() {
+  const { pathname } = useLocation();
+  const dispatch = useDispatch();
+  const currentFocus = identifyEntityFromPath(pathname);
+  const isAltFocused = useSelector(getIsAltFocusWidget);
+  const widgetSelectionIsBlocked = useSelector(getWidgetSelectionBlock);
+
+  useEffect(() => {
+    const inUIMode = [
+      FocusEntity.CANVAS,
+      FocusEntity.WIDGET,
+      FocusEntity.WIDGET_LIST,
+    ].includes(currentFocus.entity);
+
+    dispatch(setWidgetSelectionBlock(!inUIMode));
+  }, [currentFocus, dispatch]);
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [isAltFocused, widgetSelectionIsBlocked]);
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (!isAltFocused && widgetSelectionIsBlocked && e.metaKey) {
+      dispatch(altFocusWidget(e.metaKey));
+    }
+  };
+
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (!e.metaKey && widgetSelectionIsBlocked) {
+      dispatch(altFocusWidget(e.metaKey));
+    }
+  };
+}
+
+export const useIDETabClickHandlers = () => {
+  const dispatch = useDispatch();
+  const { closeAddJS, openAddJS } = useJSAdd();
+  const { closeAddQuery, openAddQuery } = useQueryAdd();
+  const { segment, segmentMode } = useCurrentEditorState();
+  const tabsConfig = TabSelectors[segment];
+  const basePageId = useSelector(getCurrentBasePageId);
+
+  const addClickHandler = useCallback(() => {
+    if (segment === EditorEntityTab.JS) openAddJS();
+
+    if (segment === EditorEntityTab.QUERIES) openAddQuery();
+  }, [segment, segmentMode, openAddQuery, openAddJS]);
+
+  const tabClickHandler = useCallback(
+    (item: EntityItem) => {
+      const navigateToUrl = tabsConfig.itemUrlSelector(item, basePageId);
+
+      if (navigateToUrl !== history.location.pathname) {
+        history.push(navigateToUrl, {
+          invokedBy: NavigationMethod.EditorTabs,
+        });
+      }
+    },
+    [tabsConfig, basePageId],
+  );
+
+  const closeClickHandler = useCallback(
+    (actionId?: string) => {
+      if (!actionId) {
+        // handle JS
+        return segment === EditorEntityTab.JS ? closeAddJS() : closeAddQuery();
+      }
+
+      if (segment === EditorEntityTab.JS)
+        dispatch(closeJSActionTab({ id: actionId, parentId: basePageId }));
+
+      if (segment === EditorEntityTab.QUERIES)
+        dispatch(closeQueryActionTab({ id: actionId, parentId: basePageId }));
+    },
+    [segment, basePageId, dispatch],
+  );
+
+  return { addClickHandler, tabClickHandler, closeClickHandler };
+};
+
+export const useShowSideBySideNudge: () => [boolean, () => void] = () => {
+  const widgetBindingsExist = useSelector(isWidgetActionConnectionPresent);
+
+  const localStorageFlag = localStorage.getItem(
+    LOCAL_STORAGE_KEYS.NUDGE_SHOWN_SPLIT_PANE,
+  );
+
+  const { setFalse, value } = useBoolean(
+    widgetBindingsExist && !localStorageFlag,
+  );
+
+  const dismissNudge = useCallback(() => {
+    setFalse();
+    localStorage.setItem(LOCAL_STORAGE_KEYS.NUDGE_SHOWN_SPLIT_PANE, "true");
+  }, [setFalse]);
+
+  return [value, dismissNudge];
 };

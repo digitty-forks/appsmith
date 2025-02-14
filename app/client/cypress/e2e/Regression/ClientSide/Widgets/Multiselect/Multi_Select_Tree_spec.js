@@ -1,20 +1,18 @@
 const formWidgetsPage = require("../../../../../locators/FormWidgets.json");
 const publish = require("../../../../../locators/publishWidgetspage.json");
 const commonlocators = require("../../../../../locators/commonlocators.json");
-const explorer = require("../../../../../locators/explorerlocators.json");
 const widgetsPage = require("../../../../../locators/Widgets.json");
 import * as _ from "../../../../../support/Objects/ObjectsCore";
 
 describe(
   "MultiSelectTree Widget Functionality",
-  { tags: ["@tag.Widget", "@tag.Multiselect"] },
+  { tags: ["@tag.Widget", "@tag.Multiselect", "@tag.Binding"] },
   function () {
     before(() => {
       _.agHelper.AddDsl("TreeSelectDsl");
     });
 
     it("1. Check isDirty meta property", function () {
-      cy.get(explorer.addWidget).click();
       cy.dragAndDropToCanvas("textwidget", { x: 300, y: 500 });
       cy.openPropertyPane("textwidget");
       cy.updateCodeInput(
@@ -102,7 +100,7 @@ describe(
     });
 
     it("5. To Unchecked Visible Widget", function () {
-      cy.togglebarDisable(commonlocators.visibleCheckbox);
+      _.agHelper.CheckUncheck(commonlocators.visibleCheckbox, false);
       _.deployMode.DeployApp();
       cy.get(
         publish.multiselecttreewidget + " " + ".rc-tree-select-multiple",
@@ -112,7 +110,7 @@ describe(
 
     it("6. To Check Visible Widget", function () {
       cy.openPropertyPane("multiselecttreewidget");
-      cy.togglebar(commonlocators.visibleCheckbox);
+      _.agHelper.CheckUncheck(commonlocators.visibleCheckbox);
       _.deployMode.DeployApp();
       cy.get(
         publish.multiselecttreewidget + " " + ".rc-tree-select-multiple",

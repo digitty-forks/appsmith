@@ -14,23 +14,15 @@ import EditorNavigation, {
   AppSidebar,
   AppSidebarButton,
   EntityType,
-  PageLeftPane,
 } from "../../../../support/Pages/EditorNavigation";
-import { featureFlagIntercept } from "../../../../support/Objects/FeatureFlags";
 import PageList from "../../../../support/Pages/PageList";
 
 let dsName: any;
 
 describe(
   "Validate MySQL Generate CRUD with JSON Form",
-  { tags: ["@tag.Datasource"] },
+  { tags: ["@tag.Datasource", "@tag.Git", "@tag.AccessControl"] },
   () => {
-    before(() => {
-      featureFlagIntercept({
-        ab_gsheet_schema_enabled: true,
-        ab_mock_mongo_schema_enabled: true,
-      });
-    });
     // beforeEach(function() {
     //   if (INTERCEPT.MYSQL) {
     //     cy.log("MySQL DB is not found. Using intercept");
@@ -55,13 +47,14 @@ describe(
         dataSources._dropdownOption,
         "worldCountryInfo",
       );
+      agHelper.GetNClick(dataSources._generatePageBtn);
 
       GenerateCRUDNValidateDeployPage("ABW", "Aruba", "North America", "Code");
 
       deployMode.NavigateBacktoEditor();
       table.WaitUntilTableLoad(0, 0, "v2");
       //Delete the test data
-      PageLeftPane.expandCollapseItem("Pages");
+      PageList.ShowList();
       entityExplorer.ActionContextMenuByEntityName({
         entityNameinLeftSidebar: "Page2",
         action: "Delete",
@@ -101,6 +94,7 @@ describe(
       assertHelper.AssertNetworkStatus("@getDatasourceStructure"); //Making sure table dropdown is populated
       agHelper.GetNClick(dataSources._selectTableDropdown, 0, true);
       agHelper.GetNClickByContains(dataSources._dropdownOption, "customers");
+      agHelper.GetNClick(dataSources._generatePageBtn);
 
       GenerateCRUDNValidateDeployPage(
         "103",
@@ -116,9 +110,9 @@ describe(
     });
 
     it("3. Generate CRUD page from datasource present in ACTIVE section", function () {
-      dataSources.GeneratePageForDS(dsName);
-      agHelper.GetNClick(dataSources._selectTableDropdown, 0, true);
-      agHelper.GetNClickByContains(dataSources._dropdownOption, "employees");
+      EditorNavigation.SelectEntityByName(dsName, EntityType.Datasource);
+      dataSources.SelectTableFromPreviewSchemaList("employees");
+      agHelper.GetNClick(dataSources._datasourceCardGeneratePageBtn);
 
       GenerateCRUDNValidateDeployPage(
         "1002",
@@ -130,7 +124,7 @@ describe(
       deployMode.NavigateBacktoEditor();
       table.WaitUntilTableLoad(0, 0, "v2");
       //Delete the test data
-      PageLeftPane.expandCollapseItem("Pages");
+      PageList.ShowList();
       entityExplorer.ActionContextMenuByEntityName({
         entityNameinLeftSidebar: "Employees",
         action: "Delete",
@@ -172,7 +166,7 @@ describe(
       agHelper.FocusElement(locators._codeMirrorTextArea);
       //agHelper.VerifyEvaluatedValue(tableCreateQuery); //failing sometimes!
 
-      dataSources.RunQueryNVerifyResponseViews();
+      dataSources.runQueryAndVerifyResponseViews();
       dataSources.AssertTableInVirtuosoList(dsName, "productlines");
 
       agHelper.ActionContextMenuWithInPane({
@@ -182,10 +176,9 @@ describe(
     });
 
     it("5. Verify Generate CRUD for the new table & Verify Deploy mode for table - Productlines", () => {
-      dataSources.GeneratePageForDS(dsName);
-      agHelper.GetNClick(dataSources._selectTableDropdown, 0, true);
-      agHelper.GetNClickByContains(dataSources._dropdownOption, "productlines");
-      agHelper.GetNClick(dataSources._generatePageBtn);
+      EditorNavigation.SelectEntityByName(dsName, EntityType.Datasource);
+      dataSources.SelectTableFromPreviewSchemaList("productlines");
+      agHelper.GetNClick(dataSources._datasourceCardGeneratePageBtn);
       agHelper.AssertContains("Successfully generated a page");
       assertHelper.AssertNetworkStatus("@replaceLayoutWithCRUDPage", 201);
       assertHelper.AssertNetworkStatus("@getActions", 200);
@@ -289,7 +282,7 @@ describe(
       agHelper.FocusElement(locators._codeMirrorTextArea);
       //agHelper.VerifyEvaluatedValue(tableCreateQuery);
 
-      dataSources.RunQueryNVerifyResponseViews();
+      dataSources.runQueryAndVerifyResponseViews();
       dataSources.AssertTableInVirtuosoList(dsName, "Stores", false);
     });
 
@@ -321,7 +314,6 @@ describe(
       col3Text: string,
       jsonFromHeader: string,
     ) {
-      agHelper.GetNClick(dataSources._generatePageBtn);
       assertHelper.AssertNetworkStatus("@replaceLayoutWithCRUDPage", 201);
       agHelper.AssertContains("Successfully generated a page");
       //assertHelper.AssertNetworkStatus("@getActions", 200);//Since failing sometimes

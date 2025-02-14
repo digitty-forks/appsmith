@@ -8,6 +8,10 @@ export class Templates {
     _templatesTab: ".t--templates-tab",
     _forkApp: ".t--fork-template",
     _templateCard: "[data-testid='template-card']",
+    _templateViewForkButton: "[data-testid='template-fork-button']",
+    _buildingBlockCardOnCanvas: "[data-testid='t--canvas-building-block-item']",
+    _datasourceConnectPromptSubmitBtn:
+      "[data-testid='t--datasource-connect-prompt-submit-btn']",
     _templatesSearchInput: "[data-testid='t--application-search-input']",
     _resultsHeader: "[data-testid='t--application-templates-results-header']",
     _templateViewGoBack: "[data-testid='t--template-view-goback']",
@@ -15,6 +19,8 @@ export class Templates {
     _closeTemplateDialogBoxBtn: ".ads-v2-modal__content-header-close-button",
     _requestForTemplateBtn: "span:contains('Request for a template')",
     _tempaltesFilterItem: "[data-testid='t--templates-filter-item']",
+    _templateFilterItemSelectedIcon: `[data-testid="t--templates-filter-item-selected-icon"]`,
+    _templatesCardForkButton: "[data-testid='t--fork-template-button']",
   };
 
   FilterTemplatesByName(query: string) {

@@ -1,112 +1,142 @@
-import React from "react";
+import React, { useState } from "react";
 import { useSelector } from "react-redux";
-import { Button, Flex } from "design-system";
+import {
+  Flex,
+  Text,
+  SearchAndAdd,
+  NoSearchResults,
+  EntityGroupsList,
+} from "@appsmith/ads";
 import styled from "styled-components";
 
-import { selectJSForPagespane } from "@appsmith/selectors/entitiesSelector";
-import { useActiveAction } from "@appsmith/pages/Editor/Explorer/hooks";
-import ExplorerJSCollectionEntity from "pages/Editor/Explorer/JSActions/JSActionEntity";
-import type { PluginType } from "entities/Action";
-import {
-  getCurrentApplicationId,
-  getCurrentPageId,
-  getPagePermissions,
-} from "selectors/editorSelectors";
+import { selectJSSegmentEditorList } from "ee/selectors/appIDESelectors";
+import { useActiveActionBaseId } from "ee/pages/Editor/Explorer/hooks";
 import { useFeatureFlag } from "utils/hooks/useFeatureFlag";
-import { FEATURE_FLAG } from "@appsmith/entities/FeatureFlag";
-import { getHasCreateActionPermission } from "@appsmith/utils/BusinessFeatures/permissionPageHelpers";
-import { createMessage, EDITOR_PANE_TEXTS } from "@appsmith/constants/messages";
-import { EmptyState } from "../components/EmptyState";
-import { ActionParentEntityType } from "@appsmith/entities/Engine/actionHelpers";
+import { FEATURE_FLAG } from "ee/entities/FeatureFlag";
+import { ActionParentEntityType } from "ee/entities/Engine/actionHelpers";
 import { FilesContextProvider } from "pages/Editor/Explorer/Files/FilesContextProvider";
-import { useJSAdd } from "./hooks";
+import { useJSAdd } from "ee/pages/Editor/IDE/EditorPane/JS/hooks";
+import { JSListItem } from "ee/pages/Editor/IDE/EditorPane/JS/old/ListItem";
+import { BlankState } from "./BlankState";
+import { EDITOR_PANE_TEXTS, createMessage } from "ee/constants/messages";
+import { filterEntityGroupsBySearchTerm } from "IDE/utils";
+import { useLocation } from "react-router";
+import { getIDETypeByUrl } from "ee/entities/IDE/utils";
+import { useParentEntityInfo } from "ee/IDE/hooks/useParentEntityInfo";
+import { useCreateActionsPermissions } from "ee/entities/IDE/hooks/useCreateActionsPermissions";
+import { JSEntity } from "ee/pages/Editor/IDE/EditorPane/JS/ListItem";
+import type { EntityItem } from "ee/IDE/Interfaces/EntityItem";
 
 const JSContainer = styled(Flex)`
-  gap: var(--ads-v2-spaces-4);
   & .t--entity-item {
     grid-template-columns: 0 auto 1fr auto auto auto auto auto;
     height: 32px;
-
-    & .t--entity-name {
-      padding-left: var(--ads-v2-spaces-3);
-    }
   }
 `;
 
 const ListJSObjects = () => {
-  const pageId = useSelector(getCurrentPageId);
-  const files = useSelector(selectJSForPagespane);
-  const JSObjects = files["JS Objects"];
-  const activeActionId = useActiveAction();
-  const applicationId = useSelector(getCurrentApplicationId);
+  const [searchTerm, setSearchTerm] = useState("");
+  const itemGroups = useSelector(selectJSSegmentEditorList);
+  const activeActionBaseId = useActiveActionBaseId();
 
-  const pagePermissions = useSelector(getPagePermissions);
+  const location = useLocation();
+  const ideType = getIDETypeByUrl(location.pathname);
+  const { editorId, parentEntityId } = useParentEntityInfo(ideType);
+  const canCreateActions = useCreateActionsPermissions(ideType);
 
-  const isFeatureEnabled = useFeatureFlag(FEATURE_FLAG.license_gac_enabled);
-
-  const canCreateActions = getHasCreateActionPermission(
-    isFeatureEnabled,
-    pagePermissions,
+  const isNewADSTemplatesEnabled = useFeatureFlag(
+    FEATURE_FLAG.release_ads_entity_item_enabled,
   );
 
-  const addButtonClickHandler = useJSAdd();
+  const filteredItemGroups = filterEntityGroupsBySearchTerm(
+    searchTerm,
+    itemGroups,
+  );
+
+  const { openAddJS } = useJSAdd();
 
   return (
     <JSContainer
       className="ide-editor-left-pane__content-js"
+      flex="1"
       flexDirection="column"
+      gap="spaces-3"
       overflow="hidden"
+      px="spaces-3"
       py="spaces-3"
     >
-      {JSObjects && JSObjects.length > 0 && canCreateActions && (
-        <Flex flexDirection="column" px="spaces-3">
-          <Button
-            kind={"secondary"}
-            onClick={addButtonClickHandler}
-            size={"sm"}
-            startIcon={"add-line"}
-          >
-            {createMessage(EDITOR_PANE_TEXTS.js_add_button)}
-          </Button>
-        </Flex>
-      )}
-      <FilesContextProvider
-        canCreateActions={canCreateActions}
-        editorId={applicationId}
-        parentEntityId={pageId}
-        parentEntityType={ActionParentEntityType.PAGE}
-      >
-        <Flex flex="1" flexDirection="column" overflowY="auto" px="spaces-3">
-          {JSObjects &&
-            JSObjects.map((JSobject) => {
-              return (
-                <Flex flexDirection={"column"} key={JSobject.id}>
-                  <ExplorerJSCollectionEntity
-                    id={JSobject.id}
-                    isActive={JSobject.id === activeActionId}
-                    key={JSobject.id}
-                    parentEntityId={pageId}
-                    parentEntityType={ActionParentEntityType.PAGE}
-                    searchKeyword={""}
-                    step={2}
-                    type={JSobject.type as PluginType}
-                  />
-                </Flex>
-              );
-            })}
-        </Flex>
-      </FilesContextProvider>
+      {(!itemGroups || itemGroups.length === 0) && <BlankState />}
 
-      {(!JSObjects || JSObjects.length === 0) && (
-        <EmptyState
-          buttonText={createMessage(EDITOR_PANE_TEXTS.js_add_button)}
-          description={createMessage(
-            EDITOR_PANE_TEXTS.js_blank_state_description,
-          )}
-          icon={"js-square-v3"}
-          onClick={canCreateActions ? addButtonClickHandler : undefined}
+      {itemGroups && itemGroups.length > 0 ? (
+        <SearchAndAdd
+          onAdd={openAddJS}
+          onSearch={setSearchTerm}
+          showAddButton={canCreateActions}
         />
-      )}
+      ) : null}
+      <Flex
+        data-testid="t--ide-list"
+        flexDirection="column"
+        gap="spaces-4"
+        overflowY="auto"
+      >
+        {isNewADSTemplatesEnabled ? (
+          <EntityGroupsList
+            groups={filteredItemGroups.map(({ group, items }) => {
+              return {
+                groupTitle: group === "NA" ? "" : group,
+                items: items,
+                className: "",
+                renderList: (item: EntityItem) => {
+                  return <JSEntity item={item} />;
+                },
+              };
+            })}
+          />
+        ) : (
+          filteredItemGroups.map(({ group, items }) => {
+            return (
+              <Flex flexDirection={"column"} key={group}>
+                {group !== "NA" ? (
+                  <Flex py="spaces-1">
+                    <Text
+                      className="overflow-hidden overflow-ellipsis whitespace-nowrap"
+                      kind="body-s"
+                    >
+                      {group}
+                    </Text>
+                  </Flex>
+                ) : null}
+                <FilesContextProvider
+                  canCreateActions={canCreateActions}
+                  editorId={editorId}
+                  parentEntityId={parentEntityId}
+                  parentEntityType={ActionParentEntityType.PAGE}
+                >
+                  {items.map((item) => {
+                    return (
+                      <JSListItem
+                        isActive={item.key === activeActionBaseId}
+                        item={item}
+                        key={item.key}
+                        parentEntityId={parentEntityId}
+                      />
+                    );
+                  })}
+                </FilesContextProvider>
+              </Flex>
+            );
+          })
+        )}
+        {filteredItemGroups.length === 0 && searchTerm !== "" ? (
+          <NoSearchResults
+            text={createMessage(
+              EDITOR_PANE_TEXTS.empty_search_result,
+              createMessage(EDITOR_PANE_TEXTS.search_objects.jsObject),
+            )}
+          />
+        ) : null}
+      </Flex>
     </JSContainer>
   );
 };

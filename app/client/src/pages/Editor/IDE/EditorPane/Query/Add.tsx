@@ -1,141 +1,82 @@
-import React, { useCallback, useMemo } from "react";
-import { Flex, List, Text } from "design-system";
-import type { ListItemProps } from "design-system";
-import { useDispatch, useSelector } from "react-redux";
-import keyBy from "lodash/keyBy";
-import { useLocation } from "react-router";
-import styled from "styled-components";
+import React, { useState } from "react";
+import {
+  EntityGroupsList,
+  Flex,
+  SearchInput,
+  NoSearchResults,
+  type FlexProps,
+  type ListItemProps,
+} from "@appsmith/ads";
 
-import { useFilteredFileOperations } from "components/editorComponents/GlobalSearch/GlobalSearchHooks";
-import { FocusEntity } from "navigation/FocusEntity";
-import { SEARCH_ITEM_TYPES } from "components/editorComponents/GlobalSearch/utils";
-import { DatasourceCreateEntryPoints } from "constants/Datasource";
-import { EntityIcon, getPluginIcon } from "pages/Editor/Explorer/ExplorerIcons";
-import { getCurrentPageId } from "@appsmith/selectors/entitiesSelector";
-import type { AppState } from "@appsmith/reducers";
-import history from "utils/history";
-import { ADD_PATH } from "constants/routes";
-import { getHasCreateActionPermission } from "@appsmith/utils/BusinessFeatures/permissionPageHelpers";
-import { useFeatureFlag } from "utils/hooks/useFeatureFlag";
-import { getPagePermissions } from "selectors/editorSelectors";
-import { FEATURE_FLAG } from "@appsmith/entities/FeatureFlag";
-import { createMessage, EDITOR_PANE_TEXTS } from "@appsmith/constants/messages";
+import { createMessage, EDITOR_PANE_TEXTS } from "ee/constants/messages";
 import SegmentAddHeader from "../components/SegmentAddHeader";
-
-const StyledList = styled(List)`
-  padding: 0;
-  gap: 0;
-`;
+import {
+  useGroupedAddQueryOperations,
+  useQueryAdd,
+} from "ee/pages/Editor/IDE/EditorPane/Query/hooks";
+import { useSelector } from "react-redux";
+import { getIDEViewMode } from "selectors/ideSelectors";
+import { EditorViewMode } from "IDE/Interfaces/EditorTypes";
+import { filterEntityGroupsBySearchTerm } from "IDE/utils";
+import { DEFAULT_GROUP_LIST_SIZE } from "../../constants";
 
 const AddQuery = () => {
-  const dispatch = useDispatch();
-  const location = useLocation();
-  const pageId = useSelector(getCurrentPageId) as string;
-  const plugins = useSelector((state: AppState) => {
-    return state.entities.plugins.list;
-  });
-  const pluginGroups = useMemo(() => keyBy(plugins, "id"), [plugins]);
-  const isFeatureEnabled = useFeatureFlag(FEATURE_FLAG.license_gac_enabled);
-  const pagePermissions = useSelector(getPagePermissions);
+  const [searchTerm, setSearchTerm] = useState("");
+  const itemGroups = useGroupedAddQueryOperations();
+  const { closeAddQuery } = useQueryAdd();
+  const ideViewMode = useSelector(getIDEViewMode);
 
-  const canCreateActions = getHasCreateActionPermission(
-    isFeatureEnabled,
-    pagePermissions,
-  );
-  let fileOperations = useFilteredFileOperations({ canCreateActions });
-  fileOperations = fileOperations.filter(
-    (fileOperation) =>
-      fileOperation.focusEntityType !== FocusEntity.JS_OBJECT &&
-      fileOperation.kind === SEARCH_ITEM_TYPES.actionOperation,
-  );
-  const fromExistingSources = fileOperations.filter(
-    (fileOperation) =>
-      fileOperation.focusEntityType === FocusEntity.QUERY ||
-      fileOperation.focusEntityType === FocusEntity.DATASOURCE,
-  );
-  const fromNewBlankAPI = fileOperations.filter(
-    (fileOperation) => fileOperation.focusEntityType === FocusEntity.API,
-  );
+  const filteredItemGroups = filterEntityGroupsBySearchTerm<
+    { groupTitle: string; className: string },
+    ListItemProps
+  >(searchTerm, itemGroups);
 
-  const addFromSource = useCallback(
-    (item: any) => {
-      if (item.kind === SEARCH_ITEM_TYPES.sectionTitle) return;
-      if (item.action) {
-        dispatch(item.action(pageId, DatasourceCreateEntryPoints.SUBMENU));
-      } else if (item.redirect) {
-        item.redirect(pageId, DatasourceCreateEntryPoints.SUBMENU);
-      }
-    },
-    [pageId, dispatch],
-  );
-
-  const getListItems = (data: any[]) => {
-    return data.map((fileOperation) => {
-      const icon =
-        fileOperation.icon ||
-        (fileOperation.pluginId && (
-          <EntityIcon>
-            {getPluginIcon(pluginGroups[fileOperation.pluginId])}
-          </EntityIcon>
-        ));
-      return {
-        startIcon: icon,
-        title:
-          fileOperation.entityExplorerTitle ||
-          fileOperation.dsName ||
-          fileOperation.title,
-        description: "",
-        descriptionType: "inline",
-        onClick: addFromSource.bind(null, fileOperation),
-      } as ListItemProps;
-    });
-  };
-
-  const closeButtonClickHandler = useCallback(() => {
-    history.push(location.pathname.replace(`${ADD_PATH}`, ""));
-  }, [pageId]);
+  const extraPadding: FlexProps =
+    ideViewMode === EditorViewMode.FullScreen
+      ? {
+          px: "spaces-4",
+          py: "spaces-7",
+        }
+      : {};
 
   return (
-    <Flex flexDirection="column" gap={"spaces-4"}>
-      <SegmentAddHeader
-        onCloseClick={closeButtonClickHandler}
-        titleMessage={EDITOR_PANE_TEXTS.query_create_tab_title}
-      />
+    <Flex
+      data-testid="t--ide-add-pane"
+      height="100%"
+      justifyContent="center"
+      p="spaces-3"
+      {...extraPadding}
+    >
       <Flex
         flexDirection="column"
-        gap="spaces-4"
-        overflow="scroll"
-        pr="spaces-2"
-        px="spaces-3"
+        gap={"spaces-4"}
+        maxW="40vw"
+        overflow="hidden"
+        width="100%"
       >
-        <Flex flexDirection="column">
-          {/* From source */}
-          <Text
-            className="px-[var(--ads-v2-spaces-3)] py-[var(--ads-v2-spaces-1)]"
-            color="var(--ads-v2-color-fg-muted)"
-            kind="body-s"
-          >
-            {createMessage(EDITOR_PANE_TEXTS.queries_create_from_existing)}
-          </Text>
-          <StyledList
-            className="t--from-source-list"
-            items={getListItems(fromExistingSources)}
+        <SegmentAddHeader
+          onCloseClick={closeAddQuery}
+          titleMessage={EDITOR_PANE_TEXTS.query_create_tab_title}
+        />
+        <SearchInput autoFocus onChange={setSearchTerm} value={searchTerm} />
+        {filteredItemGroups.length > 0 ? (
+          <EntityGroupsList
+            flexProps={{
+              pb: "spaces-3",
+            }}
+            groups={filteredItemGroups}
+            showDivider
+            visibleItems={DEFAULT_GROUP_LIST_SIZE}
           />
-        </Flex>
-        <Flex flexDirection="column">
-          {/* From source */}
-          <Text
-            className="px-[var(--ads-v2-spaces-3)] py-[var(--ads-v2-spaces-1)]"
-            color="var(--ads-v2-color-fg-muted)"
-            kind="body-s"
-          >
-            {createMessage(EDITOR_PANE_TEXTS.queries_create_new)}
-          </Text>
-          <StyledList
-            className="t--new-blank-api"
-            items={getListItems(fromNewBlankAPI)}
+        ) : null}
+        {filteredItemGroups.length === 0 && searchTerm !== "" ? (
+          <NoSearchResults
+            text={createMessage(
+              EDITOR_PANE_TEXTS.empty_search_result,
+              createMessage(EDITOR_PANE_TEXTS.search_objects.datasources),
+            )}
           />
-        </Flex>
+        ) : null}
       </Flex>
     </Flex>
   );

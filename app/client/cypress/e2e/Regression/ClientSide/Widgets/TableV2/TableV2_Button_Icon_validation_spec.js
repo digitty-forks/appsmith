@@ -6,7 +6,7 @@ import * as _ from "../../../../../support/Objects/ObjectsCore";
 
 describe(
   "Table Widget V2 property pane feature validation",
-  { tags: ["@tag.Widget", "@tag.Table"] },
+  { tags: ["@tag.Widget", "@tag.Table", "@tag.Binding"] },
   function () {
     before(() => {
       _.agHelper.AddDsl("tableV2NewDsl");
@@ -22,10 +22,10 @@ describe(
       );
       //cy.createModal("Modal", this.dataSet.ModalName);
       cy.createModal("Modal", "onRowSelected");
-      cy.isSelectRow(1);
-      cy.get(".bp3-overlay-backdrop").click({ force: true });
-      cy.isSelectRow(2);
-      cy.get(".bp3-overlay-backdrop").click({ force: true });
+      _.table.SelectTableRow(1, 0, true, "v2");
+      cy.get(".bp3-overlay-backdrop").last().click({ force: true });
+      _.table.SelectTableRow(2, 0, true, "v2");
+      cy.get(".bp3-overlay-backdrop").last().click({ force: true });
     });
 
     it("2. Table widget V2 with button colour change validation", function () {

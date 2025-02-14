@@ -40,12 +40,12 @@ export const deriveAlignedColumnHighlights =
     const { layoutStyle } = layoutProps;
 
     const baseHighlight: AnvilHighlightInfo = {
+      layoutId: layoutProps.layoutId,
       alignment:
         layoutStyle && layoutStyle["justifyContent"]
           ? (layoutStyle["justifyContent"] as FlexLayerAlignment)
           : FlexLayerAlignment.Start,
       canvasId,
-      dropZone: {},
       height: HIGHLIGHT_SIZE,
       isVertical: false,
       layoutOrder,
@@ -53,6 +53,12 @@ export const deriveAlignedColumnHighlights =
       posY: HIGHLIGHT_SIZE / 2,
       rowIndex: 0,
       width: 0,
+      edgeDetails: {
+        bottom: false,
+        left: false,
+        right: false,
+        top: false,
+      },
     };
 
     const hasFillWidget: boolean = draggedWidgets.some(

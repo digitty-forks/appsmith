@@ -1,16 +1,14 @@
 import * as _ from "../../../../../support/Objects/ObjectsCore";
-const explorer = require("../../../../../locators/explorerlocators.json");
 
 describe(
   "Radiogroup Widget Functionality",
-  { tags: ["@tag.Widget", "@tag.Radio"] },
+  { tags: ["@tag.Widget", "@tag.Radio", "@tag.Binding"] },
   function () {
     before(() => {
       _.agHelper.AddDsl("emptyDSL");
     });
 
     it("Add new widget", () => {
-      cy.get(explorer.addWidget).click();
       cy.dragAndDropToCanvas("radiogroupwidget", { x: 300, y: 300 });
       cy.get(".t--widget-radiogroupwidget").should("exist");
     });

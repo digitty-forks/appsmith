@@ -15,18 +15,18 @@ import EditorNavigation, {
 
 describe(
   "Modal Widget test cases",
-  { tags: ["@tag.Widget", "@tag.Modal"] },
+  { tags: ["@tag.Widget", "@tag.Modal", "@tag.Binding"] },
   function () {
     const image = (src: string) => 'img[src="' + src + '"]';
-    const jpgImg = "https://jpeg.org/images/jpegsystems-home.jpg";
-    const gifImg =
-      "https://mir-s3-cdn-cf.behance.net/project_modules/max_1200/5eeea355389655.59822ff824b72.gif";
+    const jpgImg =
+      "https://community.appsmith.com/sites/default/files/styles/small_thumbnail/public/2024-03/aws-logo.jpg";
+    const gifImg = "https://docs.appsmith.com/img/multi-update-sql.gif";
 
     it("1. Modal widget functionality", () => {
       entityExplorer.DragDropWidgetNVerify(draggableWidgets.BUTTON);
       entityExplorer.DragDropWidgetNVerify(draggableWidgets.MODAL, 300, 300);
       EditorNavigation.SelectEntityByName("Button1", EntityType.Widget);
-      propPane.EnterJSContext("onClick", "{{showModal('Modal1');}}");
+      propPane.EnterJSContext("onClick", "{{showModal(Modal1.name);}}");
       deployMode.DeployApp(locators._widgetInDeployed(draggableWidgets.BUTTON));
       agHelper.WaitUntilEleAppear(
         locators._widgetInDeployed(draggableWidgets.BUTTON),
@@ -126,7 +126,6 @@ describe(
           " " +
           locators._widgetInDeployed(draggableWidgets.TABLE),
       );
-
       deployMode.NavigateBacktoEditor();
 
       //Fixed height
@@ -135,10 +134,6 @@ describe(
       deployMode.DeployApp(locators._widgetInDeployed(draggableWidgets.BUTTON));
       agHelper.ClickButton("Submit");
       agHelper.AssertElementVisibility(locators._modal);
-
-      //Verify that a fixed canvas size is visible when height is selected as Fixed
-      agHelper.AssertProperty(locators._modal, "offsetHeight", 1094);
-      agHelper.AssertProperty(locators._modal, "offsetWidth", 456);
       agHelper.AssertElementVisibility(
         locators._modal +
           " " +

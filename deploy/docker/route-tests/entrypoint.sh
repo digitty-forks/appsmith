@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 set -o errexit
 set -o nounset
@@ -44,8 +44,11 @@ echo
 export TMP=/tmp/appsmith
 export WWW_PATH="$TMP/www"
 
-mkdir -p "$WWW_PATH"
-echo -n 'index.html body' > "$WWW_PATH/index.html"
+# Fake files needed by the caddy-reconfigure script
+mkdir -p "$WWW_PATH" /opt/appsmith/editor
+echo -n 'index.html body, this will be replaced' > "$WWW_PATH/index.html"
+echo '{}' > /opt/appsmith/info.json
+echo -n 'actual index.html body' > /opt/appsmith/editor/index.html
 mkcert -install
 
 # Start echo server
@@ -74,6 +77,7 @@ new-spec "Spec 2: With a custom domain, cert obtained (because of internal CA)"
 export APPSMITH_CUSTOM_DOMAIN=custom-domain.com
 node /caddy-reconfigure.mjs
 #sed -i '2i acme_ca https://acme-staging-v02.api.letsencrypt.org/directory' "$TMP/Caddyfile"
+# The domain being present is a necceary thing here, since otherwise Caddy won't know what domain to provision a cert for.
 sed -i '/https:\/\/'"$APPSMITH_CUSTOM_DOMAIN"' {$/a tls internal' "$TMP/Caddyfile"
 reload-caddy
 run-hurl --variable ca_issuer="CN = Caddy Local Authority - ECC Intermediate" \

@@ -1,13 +1,10 @@
-const explorer = require("../../../../../locators/explorerlocators.json");
-
 const widgetName = "audiorecorderwidget";
 
 describe(
   "AudioRecorder Widget",
-  { tags: ["@tag.Widget", "@tag.Audio"] },
+  { tags: ["@tag.Widget", "@tag.Audio", "@tag.Binding"] },
   () => {
     it("Drag & drop AudioRecorder and Text widgets", () => {
-      cy.get(explorer.addWidget).click();
       cy.dragAndDropToCanvas(widgetName, { x: 300, y: 300 });
       cy.get(`.t--widget-${widgetName}`).should("exist");
       cy.dragAndDropToCanvas("textwidget", { x: 300, y: 500 });

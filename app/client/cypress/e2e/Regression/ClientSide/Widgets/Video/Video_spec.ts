@@ -9,10 +9,10 @@ import {
 
 describe(
   "Video Widget Functionality",
-  { tags: ["@tag.Widget", "@tag.Video"] },
+  { tags: ["@tag.Widget", "@tag.Video", "@tag.Binding"] },
   function () {
     before(() => {
-      entityExplorer.DragNDropWidget(draggableWidgets.VIDEO);
+      entityExplorer.DragDropWidgetNVerify(draggableWidgets.VIDEO);
     });
 
     it("1. Video Widget play functionality validation", function () {

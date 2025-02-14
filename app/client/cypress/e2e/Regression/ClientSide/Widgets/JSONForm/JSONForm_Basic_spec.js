@@ -2,24 +2,18 @@ import EditorNavigation, {
   EntityType,
 } from "../../../../../support/Pages/EditorNavigation";
 
-const commonlocators = require("../../../../../locators/commonlocators.json");
-const explorer = require("../../../../../locators/explorerlocators.json");
 const widgetsPage = require("../../../../../locators/Widgets.json");
 const jsonform = require("../../../../../locators/jsonFormWidget.json");
-import { ObjectsRegistry } from "../../../../../support/Objects/Registry";
 const {
   deployMode,
-  entityExplorer,
-  locators,
   propPane,
 } = require("../../../../../support/Objects/ObjectsCore");
 
 describe(
   "JsonForm widget basis c usecases",
-  { tags: ["@tag.Widget", "@tag.JSONForm"] },
+  { tags: ["@tag.Widget", "@tag.JSONForm", "@tag.Sanity", "@tag.Binding"] },
   function () {
     before(() => {
-      cy.get(explorer.addWidget).click();
       cy.dragAndDropToCanvas("jsonformwidget", { x: 200, y: 200 });
       cy.fixture("TestDataSet1").then(function (dataSet) {
         cy.openPropertyPane("jsonformwidget");
