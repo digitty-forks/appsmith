@@ -2,9 +2,7 @@ import EditorNavigation, {
   EntityType,
 } from "../../../../../support/Pages/EditorNavigation";
 
-const dslWithServerSide = require("../../../../../fixtures/Listv2/listWithServerSideData.json");
 const commonlocators = require("../../../../../locators/commonlocators.json");
-const queryLocators = require("../../../../../locators/QueryEditor.json");
 
 import * as _ from "../../../../../support/Objects/ObjectsCore";
 
@@ -89,7 +87,7 @@ const listData = [
 
 describe(
   "List widget V2 page number and page size",
-  { tags: ["@tag.Widget", "@tag.List"] },
+  { tags: ["@tag.Widget", "@tag.List", "@tag.Sanity", "@tag.Binding"] },
   () => {
     before(() => {
       _.agHelper.AddDsl("listv2PaginationDsl");
@@ -116,9 +114,7 @@ describe(
         .should("have.text", "PageSize 4");
 
       cy.openPropertyPane("textwidget");
-      cy.wait(2000);
       cy.testJsontext("text", `Page Number {{List1.pageNo}}`);
-      cy.wait(2000);
       cy.wait("@updateLayout");
       cy.get(commonlocators.bodyTextStyle)
         .first()
@@ -143,9 +139,10 @@ describe(
       cy.openPropertyPane("listwidgetv2");
 
       cy.openPropertyPane("textwidget");
-      cy.testJsontextclear("text");
-      cy.testJsontext("text", `PageSize {{List1.pageSize}}`);
-      cy.wait("@updateLayout");
+      _.propPane.UpdatePropertyFieldValue(
+        "Text",
+        "PageSize {{List1.pageSize}}",
+      );
 
       cy.get(commonlocators.bodyTextStyle)
         .first()
@@ -153,28 +150,21 @@ describe(
 
       // toggle serversidepagination -> true
       cy.openPropertyPane("listwidgetv2");
-      cy.togglebar(".t--property-control-serversidepagination input");
+      _.agHelper.CheckUncheck(commonlocators.serverSidePaginationCheckbox);
 
       cy.get(commonlocators.bodyTextStyle)
         .first()
         .should("have.text", "PageSize 2");
-    });
 
-    it("3. should reset page no if higher than max when switched from server side to client side", () => {
-      cy.addDsl(dslWithServerSide);
+      //should reset page no if higher than max when switched from server side to client side"
       // Open Datasource editor
-      cy.wait(2000);
       _.dataSources.CreateDataSource("Postgres");
       _.dataSources.CreateQueryAfterDSSaved();
 
-      // Click the editing field
-      cy.get(".t--action-name-edit-field").click({ force: true });
-
-      // Click the editing field
-      cy.get(queryLocators.queryNameField).type("Query1");
+      _.agHelper.RenameQuery("Query1");
 
       // switching off Use Prepared Statement toggle
-      cy.get(queryLocators.switch).last().click({ force: true });
+      _.dataSources.ToggleUsePreparedStatement(false);
 
       _.dataSources.EnterQuery(
         "SELECT * FROM users OFFSET {{List1.pageNo * 1}} LIMIT {{List1.pageSize}};",
@@ -186,19 +176,13 @@ describe(
 
       EditorNavigation.SelectEntityByName("Page1", EntityType.Page);
 
-      cy.wait(1000);
-
       // Click next page in list widget
-      cy.get(".t--list-widget-next-page")
-        .find("button")
-        .click({ force: true })
-        .wait(1000);
+      cy.get(".t--list-widget-next-page").find("button").click({ force: true });
 
       // Change to client side pagination
       cy.openPropertyPane("listwidgetv2");
-      cy.togglebarDisable(".t--property-control-serversidepagination input");
-
-      cy.wait(2000);
+      _.propPane.UpdatePropertyFieldValue("Items", "{{Query1.data}}");
+      _.propPane.TogglePropertyState("Server side pagination", "Off");
 
       cy.get(".t--widget-containerwidget").should("have.length", 2);
     });

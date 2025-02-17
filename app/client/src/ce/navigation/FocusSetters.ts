@@ -1,91 +1,68 @@
-import history from "utils/history";
+import history, { NavigationMethod } from "utils/history";
 import {
-  apiEditorIdURL,
   builderURL,
-  curlImportPageURL,
   datasourcesEditorIdURL,
   jsCollectionIdURL,
-  jsCollectionListURL,
-  queryEditorIdURL,
-  queryListURL,
-  saasEditorApiIdURL,
-  widgetListURL,
-} from "@appsmith/RouteBuilder";
-import { PluginType } from "entities/Action";
-import type { QueryListState } from "./FocusSelectors";
-import { EditorEntityTab } from "@appsmith/entities/IDE/constants";
+} from "ee/RouteBuilder";
+import { PluginType } from "entities/Plugin";
+import type { FocusEntityInfo } from "navigation/FocusEntity";
+import { FocusEntity } from "navigation/FocusEntity";
+import { getQueryEntityItemUrl } from "ee/pages/AppIDE/layouts/routers/utils/getQueryEntityItemUrl";
 
-export function setSelectedDatasource(id: string | undefined) {
+export function setSelectedDatasource(id?: string) {
   if (id) {
     history.replace(
       datasourcesEditorIdURL({
         datasourceId: id,
       }),
+      {
+        invokedBy: NavigationMethod.ContextSwitching,
+      },
     );
   }
 }
 
-export function setSelectedQuery(state: QueryListState) {
-  if (state) {
-    switch (state.type) {
-      case PluginType.SAAS:
-        if (state.pluginPackageName) {
-          history.replace(
-            saasEditorApiIdURL({
-              apiId: state.id,
-              pluginPackageName: state.pluginPackageName,
-            }),
-          );
-        }
-        break;
-      case PluginType.DB:
-        history.replace(
-          queryEditorIdURL({
-            queryId: state.id,
-          }),
-        );
-        break;
-      case PluginType.API:
-        if (state.id === "curl") {
-          history.replace(curlImportPageURL({}));
-        } else {
-          history.replace(
-            apiEditorIdURL({
-              apiId: state.id,
-            }),
-          );
-        }
-        break;
-      default:
-        break;
+export function setSelectedQuery(entityInfo?: FocusEntityInfo) {
+  if (entityInfo && entityInfo.params.basePageId) {
+    if ([FocusEntity.API, FocusEntity.QUERY].includes(entityInfo.entity)) {
+      const { baseApiId, baseQueryId, pluginPackageName } = entityInfo.params;
+      const key = baseApiId ? baseApiId : baseQueryId;
+
+      if (!key) return undefined;
+
+      let type: PluginType = PluginType.API;
+
+      if (pluginPackageName) {
+        type = PluginType.SAAS;
+      } else if (baseQueryId) {
+        type = PluginType.DB;
+      }
+
+      const url = getQueryEntityItemUrl(
+        { type, key, title: key },
+        entityInfo.params.basePageId,
+      );
+
+      history.replace(url, { invokedBy: NavigationMethod.ContextSwitching });
     }
   }
 }
 
-export function setSelectedJSObject(id: string | undefined) {
-  if (id) {
+export function setSelectedJSObject(focusInfo?: FocusEntityInfo) {
+  if (focusInfo && focusInfo.entity === FocusEntity.JS_OBJECT) {
     history.replace(
       jsCollectionIdURL({
-        collectionId: id,
+        baseCollectionId: focusInfo.id,
       }),
+      { invokedBy: NavigationMethod.ContextSwitching },
     );
   }
 }
 
-export function setSelectedSegment(tab?: EditorEntityTab) {
-  if (tab) {
-    switch (tab) {
-      case EditorEntityTab.JS:
-        history.replace(jsCollectionListURL({ persistExistingParams: true }));
-        break;
-      case EditorEntityTab.QUERIES:
-        history.replace(queryListURL({ persistExistingParams: true }));
-        break;
-      case EditorEntityTab.UI:
-        history.replace(widgetListURL({ persistExistingParams: true }));
-        break;
-      default:
-        history.replace(builderURL({ persistExistingParams: true }));
-    }
+export function setSelectedEntityUrl(url?: string) {
+  if (url) {
+    history.replace(builderURL({ suffix: url }), {
+      invokedBy: NavigationMethod.ContextSwitching,
+    });
   }
 }

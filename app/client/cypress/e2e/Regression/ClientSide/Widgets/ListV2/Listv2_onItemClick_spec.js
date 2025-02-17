@@ -25,20 +25,12 @@ function deleteAllWidgetsInContainer() {
   cy.wait(200);
 
   // Clear All Toast
-  cy.get(commonlocators.toastBody).each(($el) => {
-    cy.wrap($el).click();
-  });
-  cy.wait(1000);
-}
-
-function validateToastDoestExist() {
-  cy.wait(500);
-  cy.get(commonlocators.toastmsg, { timeout: 100 }).should("not.exist");
+  agHelper.WaitUntilAllToastsDisappear();
 }
 
 describe(
   "List widget v2 onItemClick",
-  { tags: ["@tag.Widget", "@tag.List"] },
+  { tags: ["@tag.Widget", "@tag.List", "@tag.Sanity", "@tag.Binding"] },
   () => {
     it("1. List widget V2 with onItemClick", () => {
       cy.dragAndDropToCanvas("listwidgetv2", {

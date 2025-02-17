@@ -6,6 +6,7 @@ import {
   locators,
   dataManager,
   propPane,
+  assertHelper,
 } from "../../../support/Objects/ObjectsCore";
 
 let datasourceName = "GraphQL_DS";
@@ -47,7 +48,9 @@ const GRAPHQL_LIMIT_DATA = [
 
 describe(
   "GraphQL Datasource Implementation",
-  { tags: ["@tag.Datasource", "@tag.Sanity"] },
+  {
+    tags: ["@tag.Datasource", "@tag.Sanity", "@tag.Git", "@tag.AccessControl"],
+  },
   function () {
     before(() => {
       agHelper.GenerateUUID();
@@ -278,7 +281,7 @@ describe(
       });
 
       apiPage.SelectPaneTab("Authentication");
-      agHelper.ClickButton("Save as datasource");
+      agHelper.GetNClick(locators._saveDatasource);
 
       agHelper.AssertText(
         locators._inputFieldByName("URL") + "//" + locators._inputField,
@@ -295,16 +298,15 @@ describe(
       // });
       dataSources.SaveDatasource();
       agHelper.ValidateToastMessage("datasource created");
-      agHelper.AssertElementVisibility(
-        locators._buttonByText("Edit datasource"),
-      );
+      agHelper.AssertElementVisibility(locators._saveDatasource);
       apiPage.SelectPaneTab("Body");
       dataSources.UpdateGraphqlQueryAndVariable({
         query: GRAPHQL_QUERY,
         variable: GRAPHQL_VARIABLES,
       });
       apiPage.RunAPI();
-      agHelper.ClickButton("Edit datasource");
+      apiPage.SelectPaneTab("Authentication");
+      agHelper.GetNClick(locators._saveDatasource);
       dataSources.AssertDataSourceInfo([
         dataManager.dsValues[
           dataManager.defaultEnviorment
@@ -323,6 +325,10 @@ describe(
         "Client Credentials",
         "Authorization Code",
       ]);
+
+      // For Client Credentials Grant Type, the button should be Save
+      // Default first selection from dropdown is Client Credentials
+      assertHelper.AssertContains("Save", "exist", dataSources._saveDs);
 
       propPane.AssertPropertiesDropDownValues("Add Access Token To", [
         "Request Header",

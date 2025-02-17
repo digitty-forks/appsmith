@@ -1,17 +1,17 @@
 import * as _ from "../../../../../support/Objects/ObjectsCore";
-import explorer from "../../../../../locators/explorerlocators.json";
+
 import formWidgetsPage from "../../../../../locators/FormWidgets.json";
+import commonlocators from "../../../../../locators/commonlocators.json";
 
 describe(
   "Tree Select Widget",
-  { tags: ["@tag.Widget", "@tag.Select"] },
+  { tags: ["@tag.Widget", "@tag.Select", "@tag.Binding"] },
   function () {
     before(() => {
       _.agHelper.AddDsl("emptyDSL");
     });
 
     it("1. Add new widget", () => {
-      cy.get(explorer.addWidget).click();
       cy.dragAndDropToCanvas("singleselecttreewidget", { x: 300, y: 300 });
       cy.get(".t--widget-singleselecttreewidget").should("exist");
     });
@@ -19,9 +19,7 @@ describe(
     it("2. toggle on allow clear selection and clear the input", () => {
       cy.openPropertyPane("singleselecttreewidget");
       // toggle on allow clear selection
-      cy.togglebar(
-        ".t--property-control-allowclearingvalue input[type='checkbox']",
-      );
+      _.agHelper.CheckUncheck(commonlocators.allowclearingValueInput);
       // assert if cancel icon exists on the widget input
       cy.get(formWidgetsPage.singleselecttreeWidget)
         .find(".rc-tree-select-clear")
@@ -55,9 +53,7 @@ describe(
     it("3. toggle of allow clear selection", () => {
       cy.openPropertyPane("singleselecttreewidget");
       // toggle off allow clear selection
-      cy.togglebarDisable(
-        ".t--property-control-allowclearingvalue input[type='checkbox']",
-      );
+      _.agHelper.CheckUncheck(commonlocators.allowclearingValueInput, false);
       // assert if cancel icon does not exists on the widget input
       cy.get(formWidgetsPage.singleselecttreeWidget)
         .find(".rc-tree-select-clear")

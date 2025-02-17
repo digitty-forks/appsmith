@@ -18,7 +18,7 @@ import {
 
 describe(
   "Tests JS Libraries",
-  { tags: ["@tag.excludeForAirgap", "@tag.JS"] },
+  { tags: ["@tag.excludeForAirgap", "@tag.JS", "@tag.Binding"] },
   () => {
     it("1. Validates Library install/uninstall", () => {
       AppSidebar.navigate(AppSidebarButton.Libraries);
@@ -31,7 +31,7 @@ describe(
     it("2. Installs the library against a unique namespace when there is a collision with the existing entity", () => {
       AppSidebar.navigate(AppSidebarButton.Editor);
       entityExplorer.DragDropWidgetNVerify(draggableWidgets.TABLE, 200, 200);
-      PageLeftPane.switchSegment(PagePaneSegment.Explorer);
+      PageLeftPane.switchSegment(PagePaneSegment.UI);
       entityExplorer.RenameEntityFromExplorer("Table1", "jsonwebtoken");
       AppSidebar.navigate(AppSidebarButton.Libraries);
       installer.OpenInstaller();

@@ -53,16 +53,17 @@ public class DatabricksPlugin extends BasePlugin {
     private static final int JDBC_URL_INDEX = 5;
     private static final long DEFAULT_PORT = 443L;
     private static final int HTTP_PATH_INDEX = 1;
+    private static final int USER_AGENT_TAG = 4;
     private static final String FORM_PROPERTIES_CONFIGURATION = "FORM_PROPERTIES_CONFIGURATION";
     private static final String JDBC_URL_CONFIGURATION = "JDBC_URL_CONFIGURATION";
 
     private static final String TABLES_QUERY =
             """
-        SELECT TABLE_SCHEMA as schema_name, table_name,
-        column_name, data_type, is_nullable,
-        column_default
-        FROM system.INFORMATION_SCHEMA.COLUMNS where table_schema <> 'information_schema'
-        """;
+            SELECT TABLE_SCHEMA as schema_name, table_name,
+            column_name, data_type, is_nullable,
+            column_default
+            FROM system.INFORMATION_SCHEMA.COLUMNS where table_schema <> 'information_schema'
+            """;
 
     public DatabricksPlugin(PluginWrapper wrapper) {
         super(wrapper);
@@ -78,12 +79,15 @@ public class DatabricksPlugin extends BasePlugin {
                 DatasourceConfiguration datasourceConfiguration,
                 ActionConfiguration actionConfiguration) {
 
+            log.debug(Thread.currentThread().getName() + ": execute() called for Databricks plugin.");
             String query = actionConfiguration.getBody();
 
             List<Map<String, Object>> rowsList = new ArrayList<>(INITIAL_ROWLIST_CAPACITY);
             final List<String> columnsList = new ArrayList<>();
 
             return (Mono<ActionExecutionResult>) Mono.fromCallable(() -> {
+                        log.debug(Thread.currentThread().getName()
+                                + ": creating action execution result from Databricks plugin.");
                         try {
 
                             // Check for connection validity :
@@ -103,8 +107,7 @@ public class DatabricksPlugin extends BasePlugin {
                         } catch (SQLException error) {
                             error.printStackTrace();
                             // This should not happen ideally.
-                            System.out.println(
-                                    "Error checking validity of Databricks connection : " + error.getMessage());
+                            log.error("Error checking validity of Databricks connection : " + error.getMessage());
                         }
 
                         ActionExecutionResult result = new ActionExecutionResult();
@@ -178,6 +181,7 @@ public class DatabricksPlugin extends BasePlugin {
         @Override
         public Mono<Connection> datasourceCreate(DatasourceConfiguration datasourceConfiguration) {
 
+            log.debug(Thread.currentThread().getName() + ": datasourceCreate() called for Databricks plugin.");
             // Ensure the databricks JDBC driver is loaded.
             try {
                 Class.forName(JDBC_DRIVER);
@@ -225,11 +229,23 @@ public class DatabricksPlugin extends BasePlugin {
 
                 // Always enable SSL for Databricks connections.
                 p.put("SSL", "1");
+
+                // Add user agent tag. Default to Appsmith if not provided.
+                String userAgentTag = (String) datasourceConfiguration
+                        .getProperties()
+                        .get(USER_AGENT_TAG)
+                        .getValue();
+                if (!StringUtils.hasText(userAgentTag)) {
+                    userAgentTag = "Appsmith";
+                }
+
+                p.put("UserAgentEntry", userAgentTag);
             } else {
                 url = "";
             }
 
             return (Mono<Connection>) Mono.fromCallable(() -> {
+                        log.debug(Thread.currentThread().getName() + ": creating connection from Databricks plugin.");
                         Connection connection = DriverManager.getConnection(url, p);
 
                         // Execute statements to default catalog and schema for all queries on this datasource.
@@ -280,13 +296,14 @@ public class DatabricksPlugin extends BasePlugin {
 
         @Override
         public void datasourceDestroy(Connection connection) {
+            log.debug(Thread.currentThread().getName() + ": datasourceDestroy() called for Databricks plugin.");
             try {
                 if (connection != null) {
                     connection.close();
                 }
             } catch (SQLException e) {
                 // This should not happen ideally.
-                System.out.println("Error closing Databricks connection : " + e.getMessage());
+                log.error("Error closing Databricks connection : " + e.getMessage());
             }
         }
 
@@ -298,7 +315,10 @@ public class DatabricksPlugin extends BasePlugin {
         @Override
         public Mono<DatasourceStructure> getStructure(
                 Connection connection, DatasourceConfiguration datasourceConfiguration) {
+            log.debug(Thread.currentThread().getName() + ": getStructure() called for Databricks plugin.");
             return Mono.fromSupplier(() -> {
+                        log.debug(Thread.currentThread().getName()
+                                + ": fetching datasource structure from Databricks plugin.");
                         final DatasourceStructure structure = new DatasourceStructure();
                         final Map<String, DatasourceStructure.Table> tablesByName =
                                 new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
@@ -335,7 +355,6 @@ public class DatabricksPlugin extends BasePlugin {
                             for (DatasourceStructure.Table table : structure.getTables()) {
                                 table.getKeys().sort(Comparator.naturalOrder());
                             }
-                            log.debug("Got the structure of Databricks DB");
                             return structure;
                         } catch (SQLException e) {
                             return Mono.error(new AppsmithPluginException(

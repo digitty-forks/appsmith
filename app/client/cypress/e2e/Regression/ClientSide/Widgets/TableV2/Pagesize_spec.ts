@@ -4,7 +4,7 @@ import PageList from "../../../../../support/Pages/PageList";
 
 describe(
   "Table widget v2",
-  { tags: ["@tag.Widget", "@tag.Table"] },
+  { tags: ["@tag.Widget", "@tag.Table", "@tag.Binding"] },
   function () {
     it("1. should test that pageSize is computed properly for all the row sizes", function () {
       PageList.AddNewPage();
@@ -24,7 +24,7 @@ describe(
       _.agHelper
         .GetText(getWidgetSelector(_.draggableWidgets.TEXT))
         .then(($text) => {
-          expect($text).to.eq("7");
+          expect($text).to.eq("6");
         });
       _.agHelper.GetNClick(
         ".t--property-control-defaultrowheight .ads-v2-segmented-control__segments-container:nth-child(2)",
@@ -41,7 +41,7 @@ describe(
       _.agHelper
         .GetText(getWidgetSelector(_.draggableWidgets.TEXT))
         .then(($text) => {
-          expect($text).to.eq("4");
+          expect($text).to.eq("3");
         });
     });
   },

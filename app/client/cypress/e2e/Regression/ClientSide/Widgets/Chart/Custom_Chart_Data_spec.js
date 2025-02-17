@@ -1,9 +1,8 @@
 import * as _ from "../../../../../support/Objects/ObjectsCore";
-import { featureFlagIntercept } from "../../../../../support/Objects/FeatureFlags";
 
 describe(
   "Chart Widget Functionality around custom chart data",
-  { tags: ["@tag.Widget", "@tag.Chart"] },
+  { tags: ["@tag.Widget", "@tag.Chart", "@tag.Binding"] },
   function () {
     before(() => {
       _.agHelper.AddDsl("chartCustomDataDsl");
@@ -11,9 +10,6 @@ describe(
 
     it("1. change chart type to custom chart", function () {
       const value1 = 40;
-      featureFlagIntercept({
-        deprecate_custom_fusioncharts_enabled: true,
-      });
       cy.openPropertyPane("chartwidget");
       cy.UpdateChartType("Custom Fusion Charts (deprecated)");
       //change chart value via input widget and validate

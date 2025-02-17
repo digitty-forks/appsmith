@@ -1,19 +1,25 @@
-import { Icon, Tooltip } from "design-system";
+import { Icon, Tooltip } from "@appsmith/ads";
 import React, { useContext } from "react";
 import { CustomWidgetBuilderContext } from "../..";
 import styles from "./styles.module.css";
-import {
-  CUSTOM_WIDGET_FEATURE,
-  createMessage,
-} from "@appsmith/constants/messages";
+import { CUSTOM_WIDGET_FEATURE, createMessage } from "ee/constants/messages";
+import AnalyticsUtil from "ee/utils/AnalyticsUtil";
 
 export default function ReferenceTrigger() {
-  const { isReferenceOpen, toggleReference } = useContext(
+  const { isReferenceOpen, toggleReference, widgetId } = useContext(
     CustomWidgetBuilderContext,
   );
 
   const onClick = () => {
     toggleReference?.();
+
+    AnalyticsUtil.logEvent(
+      "CUSTOM_WIDGET_BUILDER_REFERENCE_VISIBILITY_CHANGED",
+      {
+        widgetId: widgetId,
+        visible: !isReferenceOpen,
+      },
+    );
   };
 
   return (

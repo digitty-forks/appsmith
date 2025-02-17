@@ -1,9 +1,15 @@
 import homePageLocators from "../../../locators/HomePage";
-import { homePage, dataSources } from "../../../support/Objects/ObjectsCore";
+import {
+  homePage,
+  dataSources,
+  agHelper,
+} from "../../../support/Objects/ObjectsCore";
 
 describe(
   "Reconnect Datasource Modal validation while importing application",
-  { tags: ["@tag.Datasource", "@tag.Sanity"] },
+  {
+    tags: ["@tag.Datasource", "@tag.Sanity", "@tag.Git", "@tag.AccessControl"],
+  },
   function () {
     let workspaceId;
     let appid;
@@ -19,9 +25,13 @@ describe(
           newWorkspaceName =
             createWorkspaceInterception.response.body.data.name;
           homePage.RenameWorkspace(newWorkspaceName, workspaceId);
-          cy.get(homePageLocators.workspaceImportAppOption).click({
-            force: true,
-          });
+          agHelper.GetNClick(homePageLocators.createNew, 0, true);
+          agHelper.GetNClick(
+            homePageLocators.workspaceImportAppOption,
+            0,
+            true,
+          );
+
           cy.get(homePageLocators.workspaceImportAppModal).should("be.visible");
           cy.xpath(homePageLocators.uploadLogo)
             .first()
@@ -40,7 +50,7 @@ describe(
             } else {
               cy.get(homePageLocators.toastMessage).should(
                 "contain",
-                "Application imported successfully",
+                Cypress.env("MESSAGES").IMPORT_APP_SUCCESSFUL(),
               );
             }
             // check datasource configured success modal

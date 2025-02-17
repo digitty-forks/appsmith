@@ -15,45 +15,46 @@ const data = [
   {
     id: "001",
     name: "Blue",
-    img: "https://assets.appsmith.com/widgets/default.png",
+    img: "http://host.docker.internal:4200/clouddefaultImage.png",
     same: "1",
   },
   {
     id: "002",
     name: "Green",
-    img: "https://assets.appsmith.com/widgets/default.png",
+    img: "http://host.docker.internal:4200/clouddefaultImage.png",
     same: "01",
   },
   {
     id: "003",
     name: "Red",
-    img: "https://assets.appsmith.com/widgets/default.png",
+    img: "http://host.docker.internal:4200/clouddefaultImage.png",
     same: 1,
   },
 ];
 
 describe(
   "List v2 - Data Identifier property",
-  { tags: ["@tag.Widget", "@tag.List"] },
+  { tags: ["@tag.Widget", "@tag.List", "@tag.Binding"] },
   () => {
     before(() => {
       agHelper.AddDsl("Listv2/ListV2WithNullPrimaryKey");
-      agHelper.Sleep(3000); //for List to load for CI flakyness
     });
 
     it("1. Widgets get displayed when PrimaryKey doesn't exist - SSP", () => {
       apiPage.CreateAndFillApi(
-        "https://api.punkapi.com/v2/beers?page={{List1.pageNo}}&per_page={{List1.pageSize}}",
+        "http://host.docker.internal:5001/v1/dynamicrecords/getrecordsArray",
         "",
       );
-      agHelper.VerifyEvaluatedValue(
-        "https://api.punkapi.com/v2/beers?page=1&per_page=2",
-      );
       apiPage.RunAPI(false);
+      EditorNavigation.SelectEntityByName("List1", EntityType.Widget);
+      propPane.SelectPropertiesDropDown("Data Identifier", "value");
+      agHelper.AssertElementAbsence(propPane._dropdownControlError);
+
       EditorNavigation.SelectEntityByName("Text2", EntityType.Widget, {}, [
         "List1",
         "Container1",
       ]);
+
       propPane.UpdatePropertyFieldValue("Text", "{{currentIndex}}");
       agHelper.AssertText(propPane._widgetToVerifyText("Text2"), "text", "0");
       table.NavigateToPageUsingButton_List("next", 2);
@@ -76,7 +77,7 @@ describe(
     });
 
     it("3. Non unique data identifier should throw error- (data type issue)", () => {
-      EditorNavigation.SelectEntityByName("List2", EntityType.Query);
+      EditorNavigation.SelectEntityByName("List2", EntityType.Widget);
       propPane.UpdatePropertyFieldValue("Items", JSON.stringify(data));
       // clicking on the data identifier dropdown
       propPane.RemoveText("dataidentifier");
@@ -90,10 +91,11 @@ describe(
         1,
       );
       //Open debugger by clicking debugger icon in canvas.
-      debuggerHelper.ClickDebuggerIcon();
-      agHelper.GetNAssertContains(
-        debuggerHelper.locators._debuggerList,
+      debuggerHelper.AssertDebugError(
         "This data identifier is evaluating to a duplicate value. Please use an identifier that evaluates to a unique value.",
+        "",
+        true,
+        false,
       );
     });
   },

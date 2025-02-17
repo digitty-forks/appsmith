@@ -12,14 +12,13 @@ import {
 } from "../../../../support/Objects/ObjectsCore";
 import EditorNavigation, {
   EntityType,
-  PageLeftPane,
 } from "../../../../support/Pages/EditorNavigation";
 
 let dsName: any, newCallsign: any;
 
 describe(
   "Validate Postgres Generate CRUD with JSON Form",
-  { tags: ["@tag.Datasource"] },
+  { tags: ["@tag.Datasource", "@tag.Git", "@tag.AccessControl"] },
   () => {
     before("Create DS for generate CRUD template test", () => {
       dataSources.CreateDataSource("Postgres");
@@ -62,7 +61,7 @@ describe(
       agHelper.FocusElement(locators._codeMirrorTextArea);
       //agHelper.VerifyEvaluatedValue(tableCreateQuery); //failing sometimes!
 
-      dataSources.RunQueryNVerifyResponseViews();
+      dataSources.runQueryAndVerifyResponseViews();
     });
 
     it("2. Validate Select record from Postgress datasource & verify query response", () => {
@@ -71,7 +70,7 @@ describe(
         "public.vessels",
         "Select",
       );
-      dataSources.RunQueryNVerifyResponseViews(10);
+      dataSources.runQueryAndVerifyResponseViews({ count: 10 });
       dataSources.AssertQueryTableResponse(0, "371681");
       dataSources.AssertQueryTableResponse(6, "Passenger");
       agHelper.ActionContextMenuWithInPane({
@@ -86,10 +85,9 @@ describe(
     });
 
     it("3. Verify Generate CRUD for the new table & Verify Deploy mode for table - Vessels", () => {
-      dataSources.GeneratePageForDS(dsName);
-      agHelper.GetNClick(dataSources._selectTableDropdown, 0, true);
-      agHelper.GetNClickByContains(dataSources._dropdownOption, "vessels");
-      agHelper.GetNClick(dataSources._generatePageBtn);
+      EditorNavigation.SelectEntityByName(dsName, EntityType.Datasource);
+      dataSources.SelectTableFromPreviewSchemaList("public.vessels");
+      agHelper.GetNClick(dataSources._datasourceCardGeneratePageBtn);
       agHelper.ValidateToastMessage("Successfully generated a page");
       assertHelper.AssertNetworkStatus("@replaceLayoutWithCRUDPage", 201);
       assertHelper.AssertNetworkStatus("@getActions", 200);
@@ -172,7 +170,6 @@ describe(
       dataSources.EnterQuery(updateQuery);
       agHelper.PressEscape();
       agHelper.AssertAutoSave();
-      PageLeftPane.expandCollapseItem("Queries/JS", false);
       EditorNavigation.SelectEntityByName("update_form", EntityType.Widget);
       UpdatingVesselsJSONPropertyFileds();
     });
@@ -433,7 +430,6 @@ describe(
       dataSources.EnterQuery(insertQuery);
       agHelper.PressEscape();
       agHelper.AssertAutoSave();
-      PageLeftPane.expandCollapseItem("Queries/JS", false);
     });
 
     it("11. Update JSON fields with placeholds for Addition - on Vessels", () => {
@@ -612,29 +608,20 @@ describe(
       table.ReadTableRowColumnData(0, 0, "v2", 2000).then(($cellData) => {
         expect($cellData).not.eq("159180"); //Deleted record Store_ID
       });
-    });
-
-    it("15. Validate Deletion of the Newly Created Page - Vessels", () => {
       deployMode.NavigateBacktoEditor();
       table.WaitUntilTableLoad(0, 0, "v2");
-      //Delete the test data
-      entityExplorer.ActionContextMenuByEntityName({
-        entityNameinLeftSidebar: "Public.vessels",
-        action: "Delete",
-        entityType: entityItems.Page,
-      });
     });
 
-    it("16. Validate Drop of the Newly Created - Vessels - Table from Postgres datasource", () => {
+    it("15. Validate Drop of the Newly Created - Vessels - Table from Postgres datasource", () => {
       const deleteTblQuery = "DROP TABLE Vessels;";
       dataSources.CreateQueryForDS(dsName, deleteTblQuery, "DropVessels");
       agHelper.FocusElement(locators._codeMirrorTextArea);
 
-      dataSources.RunQueryNVerifyResponseViews();
+      dataSources.runQueryAndVerifyResponseViews();
       dataSources.AssertTableInVirtuosoList(dsName, "public.vessels", false);
     });
 
-    it("17. Verify application does not break when user runs the query with wrong table name", function () {
+    it("16. Verify application does not break when user runs the query with wrong table name", function () {
       EditorNavigation.SelectEntityByName("DropVessels", EntityType.Query);
       dataSources.RunQuery({ toValidateResponse: false });
       cy.wait("@postExecute").then(({ response }) => {
@@ -649,10 +636,10 @@ describe(
       });
     });
 
-    it("18. Verify Deletion of the datasource when Pages/Actions associated are not removed yet", () => {
+    it("17. Verify Deletion of the datasource when Pages/Actions associated are not removed yet", () => {
       deployMode.DeployApp();
       deployMode.NavigateBacktoEditor();
-      dataSources.DeleteDatasourceFromWithinDS(dsName, 200);
+      dataSources.DeleteDatasourceFromWithinDS(dsName, 409);
     });
 
     function generateCallsignInfo(rowIndex: number) {

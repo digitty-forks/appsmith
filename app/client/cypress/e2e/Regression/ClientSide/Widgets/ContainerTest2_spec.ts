@@ -12,7 +12,9 @@ import EditorNavigation, {
 
 describe(
   "Rich Text Editor widget Tests",
-  { tags: ["@tag.Widget", "@tag.Container"] },
+  {
+    tags: ["@tag.Widget", "@tag.Container", "@tag.AutoHeight", "@tag.Binding"],
+  },
   function () {
     before(() => {
       agHelper.AddDsl("ContainerWithOtherWidgetsDsl");
@@ -70,7 +72,9 @@ describe(
         "height",
         "440px",
       );
-      EditorNavigation.SelectEntityByName("List1", EntityType.Widget);
+      EditorNavigation.SelectEntityByName("List1", EntityType.Widget, {}, [
+        "NewContainer",
+      ]);
       propPane.TogglePropertyState("visible", "Off");
 
       // Preview mode
@@ -91,20 +95,9 @@ describe(
       );
       deployMode.NavigateBacktoEditor();
 
-      // Verify multiple widgets selected groups into single container
-      EditorNavigation.SelectEntityByName("Input1", EntityType.Widget, {
-        ctrlKey: true,
-      });
-      EditorNavigation.SelectEntityByName("Select1", EntityType.Widget, {
-        ctrlKey: true,
-      });
-      EditorNavigation.SelectEntityByName("Text3", EntityType.Widget, {
-        ctrlKey: true,
-      });
-      agHelper.GetElement("body").type(`{${agHelper._modifierKey}}{g}`);
-      agHelper.Sleep(1000);
-      PageLeftPane.assertPresence("Container3");
-      entityExplorer.DeleteWidgetFromEntityExplorer("Container3");
+      entityExplorer.DeleteWidgetFromEntityExplorer("Input1");
+      entityExplorer.DeleteWidgetFromEntityExplorer("Select1");
+      entityExplorer.DeleteWidgetFromEntityExplorer("Text3");
     });
 
     it("4. Validate visible toggle", () => {

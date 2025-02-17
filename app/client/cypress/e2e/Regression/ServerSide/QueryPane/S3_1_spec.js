@@ -1,5 +1,7 @@
 /// <reference types="Cypress" />
 
+import BottomTabs from "../../../../support/Pages/IDE/BottomTabs";
+
 const queryLocators = require("../../../../locators/QueryEditor.json");
 const generatePage = require("../../../../locators/GeneratePage.json");
 const formControls = require("../../../../locators/FormControl.json");
@@ -16,7 +18,7 @@ let datasourceName;
 
 describe(
   "Validate CRUD queries for Amazon S3 along with UI flow verifications",
-  { tags: ["@tag.Datasource"] },
+  { tags: ["@tag.Datasource", "@tag.Git", "@tag.AccessControl"] },
   function () {
     let fileName;
 
@@ -28,19 +30,8 @@ describe(
     });
 
     beforeEach(() => {
-      cy.startRoutesForDatasource();
+      dataSources.StartDataSourceRoutes();
     });
-
-    // afterEach(function() {
-    //   if (this.currentTest.state === "failed") {
-    //     Cypress.runner.stop();
-    //   }
-    // });
-
-    // afterEach(() => {
-    //   if (queryName)
-    //     cy.actionContextMenuByEntityName(queryName);
-    // });
 
     before("Creates a new Amazon S3 datasource", function () {
       dataSources.CreateDataSource("S3");
@@ -58,7 +49,7 @@ describe(
       entityExplorer.DragDropWidgetNVerify(draggableWidgets.INPUT_V2);
       propPane.UpdatePropertyFieldValue("Default value", "AutoTest");
       dataSources.CreateQueryForDS(datasourceName);
-      dataSources.ValidateNSelectDropdown("Commands", "List files in bucket");
+      dataSources.ValidateNSelectDropdown("Command", "List files in bucket");
       dataSources.RunQuery({ toValidateResponse: false });
       cy.wait("@postExecute").should(({ response }) => {
         expect(response.body.data.isExecutionSuccess).to.eq(false);
@@ -86,7 +77,11 @@ describe(
         "List files",
       );
 
-      dataSources.RunQueryNVerifyResponseViews(100);
+      dataSources.runQueryAndVerifyResponseViews({
+        count: 100,
+        operator: "gte",
+      });
+
       agHelper.ActionContextMenuWithInPane({
         action: "Delete",
         entityType: entityItems.Query,
@@ -98,7 +93,7 @@ describe(
       dataSources.CreateQueryForDS(datasourceName);
       cy.setQueryTimeout(30000);
       dataSources.ValidateNSelectDropdown(
-        "Commands",
+        "Command",
         "List files in bucket",
         "Create a new file",
       );
@@ -153,7 +148,11 @@ describe(
           response.body.data.pluginErrorDetails.appsmithErrorMessage,
         ).to.contains("File content is not base64 encoded.");
       });
-      dataSources.ValidateNSelectDropdown("File data type", "Base64", "Text");
+      dataSources.ValidateNSelectDropdown(
+        "File data type",
+        "Base64",
+        "Text / Binary",
+      );
 
       dataSources.RunQuery({ toValidateResponse: false });
       cy.wait("@postExecute").then(({ response }) => {
@@ -179,7 +178,7 @@ describe(
 
     it("3. Validate List Files in bucket command for new file, Verify possible error msgs, run & delete the query", () => {
       dataSources.ValidateNSelectDropdown(
-        "Commands",
+        "Command",
         "Create a new file",
         "List files in bucket",
       );
@@ -196,8 +195,7 @@ describe(
       cy.typeValueNValidate(fileName, formControls.s3ListPrefix);
       dataSources.RunQuery({ toValidateResponse: false });
 
-      agHelper.GetNClick(dataSources._queryResponse("TABLE"));
-      agHelper.GetNClick(dataSources._queryResponse("JSON"));
+      BottomTabs.response.selectResponseResponseTypeFromMenu("JSON");
 
       cy.wait("@postExecute").then(({ response }) => {
         expect(response.body.data.isExecutionSuccess).to.eq(true);
@@ -252,7 +250,7 @@ describe(
 
       //cy.setQueryTimeout(30000);
       dataSources.ValidateNSelectDropdown(
-        "Commands",
+        "Command",
         "List files in bucket",
         "Read file",
       );
@@ -340,7 +338,7 @@ describe(
       dataSources.CreateQueryForDS(datasourceName);
       cy.setQueryTimeout(30000);
       dataSources.ValidateNSelectDropdown(
-        "Commands",
+        "Command",
         "List files in bucket",
         "Delete file",
       );
@@ -382,12 +380,11 @@ describe(
         );
       });
 
-      //cy.selectEntityByName("Query1");
       //cy.deleteQueryUsingContext(); //exeute actions & 200 response is verified in this method
 
       //Validating List Files in bucket command after new file is deleted
       dataSources.ValidateNSelectDropdown(
-        "Commands",
+        "Command",
         "Delete file",
         "List files in bucket",
       );
@@ -405,7 +402,7 @@ describe(
       //Creating new file in bucket
       dataSources.CreateQueryForDS(datasourceName);
       dataSources.ValidateNSelectDropdown(
-        "Commands",
+        "Command",
         "List files in bucket",
         "Create a new file",
       );
@@ -418,7 +415,11 @@ describe(
         fileName = "S3Crud_" + uid;
 
         cy.typeValueNValidate(fileName, formControls.s3FilePath);
-        dataSources.ValidateNSelectDropdown("File data type", "Base64", "Text");
+        dataSources.ValidateNSelectDropdown(
+          "File data type",
+          "Base64",
+          "Text / Binary",
+        );
         cy.typeValueNValidate(
           '{"data": "Hi, this is Automation script adding file for S3 CRUD New Page validation!"}',
           formControls.rawBody,
@@ -472,47 +473,58 @@ describe(
 
         cy.ClickGotIt();
 
+        agHelper.WaitUntilAllToastsDisappear();
+
         //Verifying Searching File from UI
         agHelper.TypeText(
           queryLocators.searchFilefield,
           fileName.substring(0, 14),
         );
 
-        agHelper
-          .AssertElementVisibility(
-            ".t--widget-textwidget span:contains('" + fileName + "')",
-          )
-          .should("have.length", 1);
+        agHelper.AssertElementVisibility(
+          ".t--widget-textwidget span:contains('" + fileName + "')",
+        );
+
+        agHelper.AssertElementLength(
+          ".t--widget-textwidget span:contains('" + fileName + "')",
+          1,
+        );
 
         //Verifying CopyFile URL icon from UI - Browser pop up appearing
         // cy.xpath(queryLocators.copyURLicon).click()
         // cy.window().its('navigator.clipboard').invoke('readText').should('contain', 'CRUDNewPageFile')
 
         //Verifying DeleteFile icon from UI
-        cy.xpath(
+        agHelper.GetNClick(
           "//span[text()='" +
             fileName +
             "']/ancestor::div[@type='CANVAS_WIDGET']//button/span[@icon='trash']/ancestor::div[contains(@class,'t--widget-iconbuttonwidget')]",
-        )
-          .eq(0)
-          .click(); //Verifies 8684
+        );
+
+        //Verifies 8684
         cy.VerifyErrorMsgAbsence("Cyclic dependency found while evaluating"); //Verifies 8686
 
-        expect(
-          cy.xpath(
-            "//span[text()='Are you sure you want to delete the file?']",
-          ),
-        ).to.exist; //verify Delete File dialog appears
-        cy.clickButton("Confirm").wait(1000); //wait for Delete operation to be successfull, //Verifies 8684
-        agHelper.AssertElementAbsence(".t--modal-widget", 10000);
+        agHelper.AssertElementVisibility(
+          "//span[text()='Are you sure you want to delete the file?']",
+        ); //verify Delete File dialog appears
+
+        agHelper.ClickButton("Confirm"); //wait for Delete operation to be successfull, //Verifies 8684
+
+        agHelper.AssertElementAbsence(
+          ".t--modal-widget",
+          Cypress.config().pageLoadTimeout,
+        );
         cy.wait("@postExecute").then(({ response }) => {
           expect(response.body.data.isExecutionSuccess).to.eq(true);
         });
         cy.wait("@postExecute").then(({ response }) => {
           expect(response.body.data.isExecutionSuccess).to.eq(true);
         });
-        cy.wait(2000);
-        cy.get("span:contains('" + fileName + "')").should("not.exist"); //verify Deletion of file is success from UI also
+
+        agHelper.AssertElementAbsence(
+          "span:contains('" + fileName + "')",
+          Cypress.config().pageLoadTimeout,
+        ); //verify Deletion of file is success from UI also
       });
     });
 

@@ -6,10 +6,10 @@ import {
 
 describe(
   "Create a query with a empty datasource, run, save the query",
-  { tags: ["@tag.Datasource"] },
+  { tags: ["@tag.Datasource", "@tag.Git", "@tag.AccessControl"] },
   function () {
     beforeEach(() => {
-      cy.startRoutesForDatasource();
+      dataSources.StartDataSourceRoutes();
     });
 
     it("1. Create a empty datasource", function () {
@@ -22,8 +22,8 @@ describe(
       dataSources.CreateQueryAfterDSSaved("select * from users limit 10");
       dataSources.RunQuery({ toValidateResponse: false });
       cy.wait(500);
-      cy.get("[data-testid=t--query-error]").contains(
-        "[Missing endpoint., Missing username for authentication.]",
+      cy.get(dataSources._queryError).contains(
+        "[Missing username for authentication., Missing hostname., Missing password for authentication.]",
       );
       agHelper.ActionContextMenuWithInPane({
         action: "Delete",

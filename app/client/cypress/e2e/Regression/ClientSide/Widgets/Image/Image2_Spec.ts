@@ -13,18 +13,21 @@ import EditorNavigation, {
 
 describe(
   "Image widget tests",
-  { tags: ["@tag.Widget", "@tag.Image"] },
+  { tags: ["@tag.Widget", "@tag.Image", "@tag.Binding"] },
   function () {
     const image = (src: string) => 'img[src="' + src + '"]';
-    const jpgImg = "https://jpeg.org/images/jpegsystems-home.jpg";
+    const jpgImg =
+      "https://community.appsmith.com/sites/default/files/styles/small_thumbnail/public/2024-03/aws-logo.jpg?itok=yG4bpfFs";
     const gifImg =
-      "https://mir-s3-cdn-cf.behance.net/project_modules/max_1200/5eeea355389655.59822ff824b72.gif";
-    const svgImg = "https://assets.codepen.io/3/kiwi.svg";
-    const webpImg = "https://www.gstatic.com/webp/gallery/4.sm.webp";
-    const pngImg = "https://assets.appsmith.com/widgets/default.png";
+      "https://www.appsmith.com/_next/image?url=https%3A%2F%2Fimages.ctfassets.net%2Flpvian6u6i39%2F5dIHs6B4O8JrcziD01Tzpr%2F080ac2887506afab72a160b897364607%2Fimage-11.gif&w=1080&q=75";
+    const svgImg = "https://community.appsmith.com/appsmith-community-logo.svg";
+    const webpImg =
+      "https://www.appsmith.com/assets/images/animations/widgets/img_0.webp";
+    const pngImg =
+      "https://community.appsmith.com/sites/default/files/styles/16_9_card/public/septembercoding-min%20%281%29.png?itok=unYUZ0zm";
 
     before(() => {
-      entityExplorer.DragNDropWidget(draggableWidgets.IMAGE);
+      entityExplorer.DragDropWidgetNVerify(draggableWidgets.IMAGE);
     });
 
     it("1. Verify Image Preview for different types of images (png, jpg, gif, svg, webp)", function () {
@@ -76,7 +79,7 @@ describe(
         "Image",
         "{{Button1.isDisabled ?'" + jpgImg + "':'" + gifImg + "'}}",
       );
-      entityExplorer.DragNDropWidget(draggableWidgets.BUTTON, 200, 400);
+      entityExplorer.DragDropWidgetNVerify(draggableWidgets.BUTTON, 200, 400);
       deployMode.DeployApp(locators._widgetInDeployed(draggableWidgets.IMAGE));
       agHelper.AssertElementExist(image(gifImg));
       agHelper.AssertContains("Unable to display the image", "not.exist");

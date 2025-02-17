@@ -2,6 +2,7 @@ import {
   agHelper,
   apiPage,
   assertHelper,
+  debuggerHelper,
   entityExplorer,
   entityItems,
   propPane,
@@ -9,11 +10,12 @@ import {
 import EditorNavigation, {
   EntityType,
   PageLeftPane,
+  PagePaneSegment,
 } from "../../../../support/Pages/EditorNavigation";
 
 describe(
   "JSObjects OnLoad Actions tests",
-  { tags: ["@tag.PropertyPane", "@tag.JS"] },
+  { tags: ["@tag.PropertyPane", "@tag.JS", "@tag.Binding"] },
   function () {
     before(() => {
       agHelper.AddDsl("tableWidgetDsl");
@@ -44,7 +46,7 @@ describe(
     it("2. Shows when API failed to load on page load.", function () {
       cy.fixture("testdata").then(function (dataSet: any) {
         apiPage.CreateAndFillApi(
-          "https://abc.com/" + dataSet.methods,
+          "https://www.google.com/" + dataSet.methods,
           "PageLoadApi2",
         );
       });
@@ -57,11 +59,17 @@ describe(
         `{{PageLoadApi2.data.data}}`,
       );
       agHelper.RefreshPage();
-      agHelper.ValidateToastMessage(`The action "PageLoadApi2" has failed.`);
+      debuggerHelper.OpenDebugger();
+      debuggerHelper.ClickLogsTab();
+      debuggerHelper.DoesConsoleLogExist(
+        "Failed execution",
+        true,
+        "PageLoadApi2",
+      );
     });
 
     after(() => {
-      PageLeftPane.expandCollapseItem("Queries/JS");
+      PageLeftPane.switchSegment(PagePaneSegment.Queries);
       entityExplorer.ActionContextMenuByEntityName({
         entityNameinLeftSidebar: "PageLoadApi",
         action: "Delete",

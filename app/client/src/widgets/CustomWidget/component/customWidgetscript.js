@@ -9,30 +9,37 @@ export const EVENTS = {
   CUSTOM_WIDGET_MESSAGE_RECEIVED_ACK: "CUSTOM_WIDGET_MESSAGE_RECEIVED_ACK",
   CUSTOM_WIDGET_CONSOLE_EVENT: "CUSTOM_WIDGET_CONSOLE_EVENT",
   CUSTOM_WIDGET_THEME_UPDATE: "CUSTOM_WIDGET_THEME_UPDATE",
+  CUSTOM_WIDGET_UPDATE_HEIGHT: "CUSTOM_WIDGET_UPDATE_HEIGHT",
 };
 
 // Function to create a communication channel to the parent
 export const createChannelToParent = () => {
   const onMessageMap = new Map();
+
   // Function to register an event handler for a message type
   function onMessage(type, fn) {
     let eventHandlerList = onMessageMap.get(type);
+
     if (eventHandlerList && eventHandlerList instanceof Array) {
       eventHandlerList.push(fn);
     } else {
       eventHandlerList = [fn];
       onMessageMap.set(type, eventHandlerList);
     }
+
     return () => {
       // Function to unsubscribe an event handler
       const index = eventHandlerList.indexOf(fn);
+
       eventHandlerList.splice(index, 1);
     };
   }
+
   // Listen for 'message' events and dispatch to registered event handlers
   window.addEventListener("message", (event) => {
     if (event.source === window.parent) {
       const handlerList = onMessageMap.get(event.data.type);
+
       if (handlerList) {
         handlerList.forEach((fn) => fn(event.data));
       }
@@ -54,6 +61,7 @@ export const createChannelToParent = () => {
         (async () => {
           while (postMessageQueue.length > 0) {
             const message = postMessageQueue.shift();
+
             await new Promise((resolve) => {
               const key = Math.random();
               const unlisten = onMessage(
@@ -73,6 +81,7 @@ export const createChannelToParent = () => {
               );
             });
           }
+
           isFlushScheduled = false;
         })();
       });
@@ -119,25 +128,21 @@ export function main() {
   let isReady = false;
   let isReadyCalled = false;
 
-  // const heightObserver = new ResizeObserver((entries) => {
-  //   const height = entries[0].contentRect.height;
-  //   window.parent.postMessage(
-  //     {
-  //       type: "UPDATE_HEIGHT",
-  //       data: {
-  //         height,
-  //       },
-  //     },
-  //     "*",
-  //   );
-  // });
+  const heightObserver = new ResizeObserver(() => {
+    const height = document.body.clientHeight;
+
+    channel.postMessage(EVENTS.CUSTOM_WIDGET_UPDATE_HEIGHT, {
+      height,
+    });
+  });
+
   // Callback for when the READY_ACK message is received
   channel.onMessage(EVENTS.CUSTOM_WIDGET_READY_ACK, (event) => {
     window.appsmith.model = event.model;
     window.appsmith.ui = event.ui;
     window.appsmith.theme = event.theme;
     window.appsmith.mode = event.mode;
-    // heightObserver.observe(window.document.body);
+    heightObserver.observe(window.document.body);
 
     // Subscribe to model and UI changes
     window.appsmith.onModelChange(generateAppsmithCssVariables("model"));
@@ -222,9 +227,11 @@ export function main() {
 
           uiSubscribers.push(fn);
           fn(window.appsmith.ui);
+
           return () => {
             // Unsubscribe from UI changes
             const index = uiSubscribers.indexOf(fn);
+
             if (index > -1) {
               uiSubscribers.splice(index, 1);
             }
@@ -237,9 +244,11 @@ export function main() {
 
           modelSubscribers.push(fn);
           fn(window.appsmith.model);
+
           return () => {
             // Unsubscribe from model changes
             const index = modelSubscribers.indexOf(fn);
+
             if (index > -1) {
               modelSubscribers.splice(index, 1);
             }
@@ -285,10 +294,6 @@ export function main() {
             isReadyCalled = true;
           }
         },
-        // observeHeight: (element) => {
-        //   heightObserver.disconnect();
-        //   heightObserver.observe(element);
-        // },
       },
     });
   }
@@ -305,6 +310,7 @@ export function main() {
  */
 export const generateAppsmithCssVariables = (provider) => (source) => {
   let cssTokens = document.getElementById(`appsmith-${provider}-css-tokens`);
+
   if (!cssTokens) {
     cssTokens = document.createElement("style");
     cssTokens.id = `appsmith-${provider}-css-tokens`;
@@ -321,5 +327,6 @@ export const generateAppsmithCssVariables = (provider) => (source) => {
       return acc;
     }
   }, "");
+
   cssTokens.innerHTML = `:root {${cssTokensContent}}`;
 };

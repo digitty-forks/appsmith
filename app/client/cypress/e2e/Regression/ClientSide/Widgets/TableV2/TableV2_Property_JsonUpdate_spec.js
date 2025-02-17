@@ -8,7 +8,7 @@ import * as _ from "../../../../../support/Objects/ObjectsCore";
 
 describe(
   "Test Create Api and Bind to Table widget V2",
-  { tags: ["@tag.Widget", "@tag.Table"] },
+  { tags: ["@tag.Widget", "@tag.Table", "@tag.Binding"] },
   () => {
     before("Create an API and Execute the API and bind with Table V", () => {
       _.agHelper.AddDsl("tableV2TextPaginationDsl");
@@ -84,7 +84,7 @@ describe(
 
     it("4. Check Selected Row(s) Resets When Table data Changes", function () {
       // Select 1st row
-      cy.isSelectRow(1);
+      _.table.SelectTableRow(1, 0, true, "v2");
       cy.openPropertyPane("tablewidgetv2");
       // Empty first row
       cy.testJsontext("tabledata", "[]");

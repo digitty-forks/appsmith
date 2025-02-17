@@ -9,8 +9,6 @@ import {
 } from "../../../../../support/Objects/ObjectsCore";
 import EditorNavigation, {
   EntityType,
-  PageLeftPane,
-  PagePaneSegment,
 } from "../../../../../support/Pages/EditorNavigation";
 const widgetsPage = require("../../../../../locators/Widgets.json");
 const commonlocators = require("../../../../../locators/commonlocators.json");
@@ -19,7 +17,7 @@ const emptyTableColumnNameData = require("../../../../../fixtures/TableWidgetDat
 
 describe(
   "Table Widget V2 property pane feature validation",
-  { tags: ["@tag.Widget", "@tag.Table"] },
+  { tags: ["@tag.Widget", "@tag.Table", "@tag.Binding"] },
   function () {
     before(() => {
       agHelper.AddDsl("tableV2NewDslWithPagination");
@@ -37,15 +35,12 @@ describe(
       cy.get(widgetsPage.tabedataField).should("not.be.empty");
       cy.deleteWidget(widgetsPage.tableWidgetV2);
       cy.wait(2000);
-      cy.ClearSearch();
     });
 
     it("2. Verify empty columnName in data", () => {
       // Drag and drop table widget
       entityExplorer.DragDropWidgetNVerify(draggableWidgets.TABLE, 300, 200);
       table.AddSampleTableData();
-      // close Widget side bar
-      PageLeftPane.switchSegment(PagePaneSegment.Explorer);
       cy.get(widgetsPage.tabedataField).should("not.be.empty");
       cy.get(`${widgetsPage.tabedataField} .CodeMirror`)
         .first()
@@ -73,7 +68,7 @@ describe(
       deployMode.DeployApp(locators._widgetInDeployed(draggableWidgets.TABLE));
       table.WaitUntilTableLoad(0, 0, "v2");
       // Select 1st row
-      cy.isSelectRow(2);
+      table.SelectTableRow(2, 0, true, "v2");
       // Verify Row is selected by showing the message
       agHelper.ValidateToastMessage("Row is selected");
       deployMode.NavigateBacktoEditor();
@@ -200,8 +195,7 @@ describe(
       });
 
       // Changing Column data type from "Date" to "Image"
-      const imageVal =
-        "https://images.pexels.com/photos/736230/pexels-photo-736230.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500";
+      const imageVal = "http://host.docker.internal:4200/453-200x300.jpg";
 
       cy.changeColumnType("Image");
       // "Moement "date" to "Image"

@@ -1,17 +1,17 @@
 import EditorNavigation, {
   EntityType,
+  PageLeftPane,
 } from "../../../../../support/Pages/EditorNavigation";
 
 const commonlocators = require("../../../../../locators/commonlocators.json");
 const formWidgetsPage = require("../../../../../locators/FormWidgets.json");
 const publish = require("../../../../../locators/publishWidgetspage.json");
 const widgetsPage = require("../../../../../locators/Widgets.json");
-const explorer = require("../../../../../locators/explorerlocators.json");
 import * as _ from "../../../../../support/Objects/ObjectsCore";
 
 describe(
   "Form Widget Functionality",
-  { tags: ["@tag.Widget", "@tag.Form"] },
+  { tags: ["@tag.Widget", "@tag.Form", "@tag.Binding"] },
   function () {
     before(() => {
       _.agHelper.AddDsl("formdsl");
@@ -29,13 +29,13 @@ describe(
     });
 
     it("2. Add Multiple widgets in Form", function () {
-      cy.get(explorer.addWidget).click();
       cy.get(commonlocators.entityExplorersearch).should("be.visible");
       cy.dragAndDropToWidget("multiselectwidgetv2", "formwidget", {
         x: 100,
         y: 100,
       });
       cy.wait(500);
+      PageLeftPane.switchToAddNew();
       cy.dragAndDropToWidget("inputwidgetv2", "formwidget", { x: 50, y: 200 });
       cy.wait(500);
       cy.get(formWidgetsPage.multiselectwidgetv2).should("be.visible");
@@ -105,7 +105,7 @@ describe(
     it("4. Form Widget Functionality To Unchecked Visible Widget", function () {
       cy.openPropertyPane("formwidget");
       // Uncheck the visble JS
-      cy.togglebarDisable(commonlocators.visibleCheckbox);
+      _.agHelper.CheckUncheck(commonlocators.visibleCheckbox, false);
       _.deployMode.DeployApp();
       // Verify the unchecked visible JS
       cy.get(publish.formWidget).should("not.exist");
@@ -115,7 +115,7 @@ describe(
       // Open property pone
       cy.openPropertyPane("formwidget");
       // Check the visible JS
-      cy.togglebar(commonlocators.visibleCheckbox);
+      _.agHelper.CheckUncheck(commonlocators.visibleCheckbox);
       _.deployMode.DeployApp();
       // Verify the Checked Visible JS
       cy.get(publish.formWidget).should("be.visible");

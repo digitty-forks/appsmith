@@ -1,6 +1,4 @@
-import EditorNavigation, {
-  EntityType,
-} from "../../../support/Pages/EditorNavigation";
+import EditorNavigation from "../../../support/Pages/EditorNavigation";
 
 const datasource = require("../../../locators/DatasourcesEditor.json");
 const queryLocators = require("../../../locators/QueryEditor.json");
@@ -8,11 +6,13 @@ import { agHelper, dataSources } from "../../../support/Objects/ObjectsCore";
 
 describe(
   "SMTP datasource test cases using ted",
-  { tags: ["@tag.Datasource", "@tag.Sanity"] },
+  {
+    tags: ["@tag.Datasource", "@tag.Sanity", "@tag.Git", "@tag.AccessControl"],
+  },
   function () {
     let SMTPDatasourceName;
     beforeEach(() => {
-      cy.startRoutesForDatasource();
+      dataSources.StartDataSourceRoutes();
     });
     before(() => {
       agHelper.AddDsl("SMTPTestdsl");
@@ -36,7 +36,7 @@ describe(
         dataSources.CreateQueryAfterDSSaved();
       });
       // create new query and bind fields with widgets
-      cy.get(queryLocators.queryNameField).type("smtpquery");
+      agHelper.RenameQuery("smtpquery");
       cy.get(queryLocators.queryFromEmail)
         .first()
         .type("{{From.text}}", { parseSpecialCharSequences: false });
@@ -57,7 +57,7 @@ describe(
         .eq(6)
         .type("{{FilePicker.files}}", { parseSpecialCharSequences: false });
       agHelper.ClickOutside(); //to close the evaluated pop-up
-      EditorNavigation.SelectEntityByName("Page1", EntityType.Page);
+      EditorNavigation.ShowCanvas();
       cy.wait(2000);
     });
 
@@ -96,10 +96,11 @@ describe(
     });
 
     it("3. On canvas, fill to email, from email, subject, body, attachment and run query", function () {
-      EditorNavigation.SelectEntityByName("smtpquery", EntityType.Query);
-      EditorNavigation.SelectEntityByName("Page1", EntityType.Page);
+      EditorNavigation.ShowCanvas();
+      const noise = Math.random().toString(36).substring(0, 7);
+      const fromEmail = `smtp.datasource.tester.${noise}@appsmith.com`;
       cy.wait(2000);
-      cy.xpath("//input[@class='bp3-input']").eq(0).type("test@appsmith.com");
+      cy.xpath("//input[@class='bp3-input']").eq(0).type(fromEmail);
       cy.xpath("//input[@class='bp3-input']").eq(2).type("this is a smtp test");
       // adding an attachment in file picker
       const fixturePath = "testFile.mov";
@@ -112,23 +113,24 @@ describe(
       agHelper.ValidateToastMessage("Sent the email successfully");
 
       //Verifying if mail is sent/received using ted
-      const tedUrl = "http://localhost:5001/v1/cmd";
-      cy.request({
-        method: "GET",
-        url: tedUrl,
-        qs: {
-          cmd: "exim -bp",
-        },
-      }).then((res) => {
+      cy.request("http://localhost:5001/api/v1/maildev-emails").then((res) => {
         expect(res.status).equal(200);
-        const responseBody = JSON.stringify(res.body);
-        cy.log(responseBody);
-        const containsTestAppsmith = /test@appsmith\.com/.test(responseBody);
-        const containsQwertyAppsmith = /qwerty@appsmith\.com/.test(
-          responseBody,
+        cy.log(res.body);
+        const thisTestEmail = res.body.find(
+          (email) => email.headers.from === fromEmail,
         );
-        expect(containsTestAppsmith || containsQwertyAppsmith).to.be.true;
+        expect(thisTestEmail).to.exist;
+        expect(thisTestEmail.headers.subject).equal("this is a smtp test");
+        expect(thisTestEmail.headers.to).equal("qwerty@appsmith.com");
+        expect(thisTestEmail.attachments.length).equal(1);
       });
+    });
+
+    it("4. Verify the default port for the datasource", function () {
+      dataSources.NavigateToDSCreateNew();
+      dataSources.CreatePlugIn("SMTP");
+
+      agHelper.AssertAttribute(dataSources._port, "value", "25");
     });
   },
 );
