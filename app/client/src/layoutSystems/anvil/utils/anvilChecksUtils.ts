@@ -3,19 +3,23 @@ import { updateAndSaveLayout } from "actions/pageActions";
 import { updateAnvilParentPostWidgetDeletion } from "layoutSystems/anvil/utils/layouts/update/deletionUtils";
 import type { FlattenedWidgetProps } from "WidgetProvider/constants";
 import { MAIN_CONTAINER_WIDGET_ID } from "constants/WidgetConstants";
-import type { CanvasWidgetsReduxState } from "reducers/entityReducers/canvasWidgetsReducer";
-import { LayoutSystemTypes } from "layoutSystems/types";
-import { getLayoutSystemType } from "selectors/layoutSystemSelectors";
-import { anvilWidgets } from "widgets/anvil/constants";
+import type { CanvasWidgetsReduxState } from "ee/reducers/entityReducers/canvasWidgetsReducer";
+import { anvilWidgets } from "modules/ui-builder/ui/wds/constants";
 import {
   updateSectionWithDefaultSpaceDistribution,
   updateSectionsDistributedSpace,
-} from "layoutSystems/anvil/sectionSpaceDistributor/spaceRedistributionUtils";
+} from "layoutSystems/anvil/sectionSpaceDistributor/utils/spaceRedistributionSagaUtils";
+import { getIsAnvilLayout } from "../integrations/selectors";
 
-export function* updateAndSaveAnvilLayout(widgets: CanvasWidgetsReduxState) {
-  const layoutSystemType: LayoutSystemTypes = yield select(getLayoutSystemType);
-  if (layoutSystemType !== LayoutSystemTypes.ANVIL || !widgets) {
-    yield put(updateAndSaveLayout(widgets));
+export function* updateAndSaveAnvilLayout(
+  widgets: CanvasWidgetsReduxState,
+  options?: { isRetry: boolean; shouldReplay: boolean },
+) {
+  const isAnvilLayout: boolean = yield select(getIsAnvilLayout);
+
+  if (!isAnvilLayout || !widgets) {
+    yield put(updateAndSaveLayout(widgets, options));
+
     return;
   }
 
@@ -30,6 +34,7 @@ export function* updateAndSaveAnvilLayout(widgets: CanvasWidgetsReduxState) {
 
   for (const each of sections) {
     const children: string[] | undefined = each.children;
+
     /**
      * If a section doesn't have any children,
      * => delete it.
@@ -37,6 +42,7 @@ export function* updateAndSaveAnvilLayout(widgets: CanvasWidgetsReduxState) {
     if (!children || !children?.length) {
       let parent: FlattenedWidgetProps =
         updatedWidgets[each.parentId || MAIN_CONTAINER_WIDGET_ID];
+
       if (parent) {
         parent = {
           ...parent,
@@ -80,5 +86,5 @@ export function* updateAndSaveAnvilLayout(widgets: CanvasWidgetsReduxState) {
     }
   }
 
-  yield put(updateAndSaveLayout(updatedWidgets));
+  yield put(updateAndSaveLayout(updatedWidgets, options));
 }

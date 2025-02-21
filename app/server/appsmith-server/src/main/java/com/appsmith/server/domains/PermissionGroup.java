@@ -6,12 +6,14 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.FieldNameConstants;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.HashSet;
 import java.util.Set;
 
 @Document
+@FieldNameConstants
 @NoArgsConstructor
 @Getter
 @Setter
@@ -19,7 +21,11 @@ public class PermissionGroup extends BaseDomain {
 
     @NotNull String name;
 
+    @Deprecated
+    // TODO: Remove this field once we have migrated the data to use organizationId instead of tenantId
     String tenantId;
+
+    String organizationId;
 
     String description;
 
@@ -37,4 +43,6 @@ public class PermissionGroup extends BaseDomain {
     Set<String> assignedToUserIds = new HashSet<>();
 
     Set<String> assignedToGroupIds = new HashSet<>();
+
+    public static class Fields extends BaseDomain.Fields {}
 }

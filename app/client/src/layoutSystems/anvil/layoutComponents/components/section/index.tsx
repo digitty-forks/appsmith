@@ -7,7 +7,7 @@ import {
 import WidgetRow from "../WidgetRow";
 import { SectionRow } from "./SectionRow";
 import type { FlexLayoutProps } from "../FlexLayout";
-import { anvilWidgets } from "widgets/anvil/constants";
+import { anvilWidgets } from "modules/ui-builder/ui/wds/constants";
 import { SectionSpaceDistributor } from "layoutSystems/anvil/sectionSpaceDistributor/SectionSpaceDistributor";
 
 class Section extends WidgetRow {
@@ -17,6 +17,7 @@ class Section extends WidgetRow {
     if (props.allowedWidgetTypes && props.allowedWidgetTypes.length) {
       return props.allowedWidgetTypes;
     }
+
     // TODO: remove string hard coding.
     return [anvilWidgets.ZONE_WIDGET];
   }
@@ -26,6 +27,7 @@ class Section extends WidgetRow {
       ...super.getFlexLayoutProps(),
       alignSelf: "stretch",
       direction: "row",
+      gap: "spacing-4",
     };
   }
 
@@ -38,19 +40,28 @@ class Section extends WidgetRow {
       />
     );
   }
-  renderDraggingArena(): React.ReactNode {
+
+  renderEditMode(): JSX.Element {
     return (
       <>
-        {super.renderDraggingArena()}
-        {this.renderSectionSpaceDistributor()}
+        {this.renderDraggingArena()}
+        {this.renderSpaceDistributedSection()}
       </>
     );
   }
-
-  render(): JSX.Element {
+  renderSpaceDistributedSection(): JSX.Element {
     return (
       <SectionRow {...this.getFlexLayoutProps()}>
-        {this.renderContent()}
+        {this.renderSectionSpaceDistributor()}
+        {super.renderChildren()}
+      </SectionRow>
+    );
+  }
+
+  renderViewMode(): JSX.Element {
+    return (
+      <SectionRow {...this.getFlexLayoutProps()}>
+        {super.renderChildren()}
       </SectionRow>
     );
   }

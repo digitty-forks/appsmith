@@ -1,8 +1,6 @@
 import EditorNavigation, {
   EntityType,
 } from "../../../../../support/Pages/EditorNavigation";
-
-const widgetsPage = require("../../../../../locators/Widgets.json");
 import {
   agHelper,
   draggableWidgets,
@@ -12,14 +10,14 @@ import {
 
 describe(
   "Table Widget V2 property pane deafult feature validation",
-  { tags: ["@tag.Widget", "@tag.Table"] },
+  { tags: ["@tag.Widget", "@tag.Table", "@tag.Binding"] },
   function () {
     before(() => {
       agHelper.AddDsl("defaultTableV2Dsl");
     });
 
     it("1. Verify default table row Data", function () {
-      entityExplorer.DragNDropWidget(draggableWidgets.TABLE);
+      entityExplorer.DragDropWidgetNVerify(draggableWidgets.TABLE);
       table.AddSampleTableData();
       EditorNavigation.SelectEntityByName("Table2", EntityType.Widget);
 

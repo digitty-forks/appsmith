@@ -6,16 +6,24 @@ import type {
 import { generateReactKey } from "utils/generators";
 import type BaseLayoutComponent from "layoutSystems/anvil/layoutComponents/BaseLayoutComponent";
 import LayoutFactory from "layoutSystems/anvil/layoutComponents/LayoutFactory";
-import type { CanvasWidgetsReduxState } from "reducers/entityReducers/canvasWidgetsReducer";
+import type { CanvasWidgetsReduxState } from "ee/reducers/entityReducers/canvasWidgetsReducer";
 import { call } from "redux-saga/effects";
 import { addWidgetsToChildTemplate } from "./additionUtils";
 import type { FlattenedWidgetProps } from "WidgetProvider/constants";
-import {
-  addNewWidgetToDsl,
-  getCreateWidgetPayload,
-} from "../../widgetAdditionUtils";
 import { isLargeWidget } from "../../widgetUtils";
-import { anvilWidgets } from "widgets/anvil/constants";
+import { anvilWidgets } from "modules/ui-builder/ui/wds/constants";
+import {
+  moveWidgets,
+  severTiesFromParents,
+  transformMovedWidgets,
+} from "./moveUtils";
+import type { WidgetProps } from "widgets/BaseWidget";
+import {
+  hasWidgetJsPropertiesEnabled,
+  isEmptyWidget,
+  widgetChildren,
+} from "../widgetUtils";
+import { addNewAnvilWidgetToDSL } from "layoutSystems/anvil/integrations/sagas/anvilWidgetAdditionSagas/helpers";
 
 export function* createZoneAndAddWidgets(
   allWidgets: CanvasWidgetsReduxState,
@@ -27,18 +35,43 @@ export function* createZoneAndAddWidgets(
    * Create Zone widget.
    */
   const widgetId: string = generateReactKey();
-  let updatedWidgets: CanvasWidgetsReduxState = yield call(
-    addNewWidgetToDsl,
+  const updatedWidgets: CanvasWidgetsReduxState = yield addNewAnvilWidgetToDSL(
     allWidgets,
-    getCreateWidgetPayload(widgetId, anvilWidgets.ZONE_WIDGET, parentId),
+    {
+      widgetId,
+      type: anvilWidgets.ZONE_WIDGET,
+      parentId,
+    },
   );
 
   /**
    * Extract zone layout.
    */
   const zoneProps: FlattenedWidgetProps = updatedWidgets[widgetId];
-  const { widgetId: zoneWidgetId } = zoneProps;
-  const preset: LayoutProps[] = zoneProps.layout;
+
+  /**
+   * Add widgets to zone. and update relationships.
+   */
+  const res: { canvasWidgets: CanvasWidgetsReduxState; zone: WidgetProps } =
+    yield call(
+      addWidgetsToZone,
+      updatedWidgets,
+      draggedWidgets,
+      highlight,
+      zoneProps.widgetId,
+    );
+
+  return res;
+}
+
+export function* addWidgetsToZone(
+  allWidgets: CanvasWidgetsReduxState,
+  draggedWidgets: WidgetLayoutProps[],
+  highlight: AnvilHighlightInfo,
+  zoneWidgetId: string,
+) {
+  let updatedWidgets: CanvasWidgetsReduxState = { ...allWidgets };
+  const preset: LayoutProps[] = updatedWidgets[zoneWidgetId].layout;
   let zoneLayout: LayoutProps = preset[0];
 
   /**
@@ -51,7 +84,6 @@ export function* createZoneAndAddWidgets(
     zoneWidgetId,
     draggedWidgets,
   );
-  zoneProps.children = updatedWidgets[zoneWidgetId].children;
 
   /**
    * Split new widgets based on type.
@@ -67,6 +99,8 @@ export function* createZoneAndAddWidgets(
     zoneLayout.layoutType,
   );
 
+  let rowsAdded = 0;
+
   if (smallWidgets.length) {
     zoneLayout = addWidgetsToChildTemplate(
       zoneLayout,
@@ -74,46 +108,41 @@ export function* createZoneAndAddWidgets(
       smallWidgets,
       highlight,
     );
+    rowsAdded += 1;
   }
 
   /**
    * Add large widgets to the zone layout.
    */
-  largeWidgets.forEach((widget: WidgetLayoutProps) => {
-    zoneLayout = addWidgetsToChildTemplate(
-      zoneLayout,
-      zoneComp,
-      [widget],
-      highlight,
-    );
+  largeWidgets.forEach((widget: WidgetLayoutProps, index: number) => {
+    zoneLayout = addWidgetsToChildTemplate(zoneLayout, zoneComp, [widget], {
+      ...highlight,
+      rowIndex: highlight.rowIndex + rowsAdded + index,
+    });
   });
-
-  /**
-   * Update zone preset with the updated zone layout.
-   */
-  preset[0] = zoneLayout;
 
   /**
    * Update zone widget with the updated preset.
    */
-  zoneProps.layout = preset;
+  updatedWidgets[zoneWidgetId].layout = [zoneLayout];
 
   return {
-    canvasWidgets: {
-      ...updatedWidgets,
-      [zoneWidgetId]: zoneProps,
-    },
-    zone: zoneProps,
+    canvasWidgets: updatedWidgets,
+    zone: updatedWidgets[zoneWidgetId],
   };
 }
 
-function splitWidgets(widgets: WidgetLayoutProps[]): WidgetLayoutProps[][] {
+export function splitWidgets(
+  widgets: WidgetLayoutProps[],
+): WidgetLayoutProps[][] {
   const smallWidgets: WidgetLayoutProps[] = [];
   const largeWidgets: WidgetLayoutProps[] = [];
+
   widgets.forEach((widget: WidgetLayoutProps) => {
     if (isLargeWidget(widget.widgetType)) largeWidgets.push(widget);
     else smallWidgets.push(widget);
   });
+
   return [smallWidgets, largeWidgets];
 }
 
@@ -123,8 +152,10 @@ function* updateDraggedWidgets(
   draggedWidgets: WidgetLayoutProps[],
 ) {
   let updatedWidgets: CanvasWidgetsReduxState = { ...allWidgets };
+
   for (const each of draggedWidgets) {
     const { widgetId, widgetType } = each;
+
     /**
      * If widget exits.
      * => update parentId.
@@ -141,14 +172,95 @@ function* updateDraggedWidgets(
       };
       continue;
     }
+
     /**
      * Create new widget with zone as the parent.
      */
-    updatedWidgets = yield call(
-      addNewWidgetToDsl,
-      allWidgets,
-      getCreateWidgetPayload(widgetId, widgetType, zoneWidgetId),
-    );
+    updatedWidgets = yield addNewAnvilWidgetToDSL(allWidgets, {
+      widgetId,
+      type: widgetType,
+      parentId: zoneWidgetId,
+    });
   }
+
   return updatedWidgets;
 }
+
+function* moveWidgetsToNewLayout(
+  allWidgets: CanvasWidgetsReduxState,
+  movedWidgets: string[],
+  highlight: AnvilHighlightInfo,
+) {
+  let widgets: CanvasWidgetsReduxState = { ...allWidgets };
+
+  /**
+   * Remove moved widgets from previous parents.
+   */
+  widgets = severTiesFromParents(widgets, movedWidgets);
+
+  /**
+   * Get the new Zone parent and its Canvas.
+   */
+  const { canvasId } = highlight;
+
+  const zone: FlattenedWidgetProps = widgets[canvasId];
+
+  /**
+   * Add moved widgets to the section.
+   */
+  const { canvasWidgets } = yield call(
+    addWidgetsToZone,
+    widgets,
+    transformMovedWidgets(widgets, movedWidgets, highlight),
+    highlight,
+    zone.widgetId,
+  );
+
+  return canvasWidgets;
+}
+
+export function* moveWidgetsToZone(
+  allWidgets: CanvasWidgetsReduxState,
+  movedWidgets: string[],
+  highlight: AnvilHighlightInfo,
+) {
+  const widgets: CanvasWidgetsReduxState = { ...allWidgets };
+  const draggedWidgets: WidgetLayoutProps[] = transformMovedWidgets(
+    widgets,
+    movedWidgets,
+    highlight,
+  );
+  const isLargeWidgetPresent = draggedWidgets.some((each) =>
+    isLargeWidget(each.widgetType),
+  );
+
+  if (isLargeWidgetPresent) {
+    // If a large widget is present, move widgets to a new layout.
+    const canvasWidgets: CanvasWidgetsReduxState = yield call(
+      moveWidgetsToNewLayout,
+      widgets,
+      movedWidgets,
+      highlight,
+    );
+
+    return canvasWidgets;
+  } else {
+    // If no large widget is present, move widgets to the same layout.
+    const updatedWidgets = moveWidgets(allWidgets, movedWidgets, highlight);
+
+    return updatedWidgets;
+  }
+}
+
+export const isZoneWidget = (widget: FlattenedWidgetProps): boolean =>
+  widget.type === anvilWidgets.ZONE_WIDGET;
+
+export const isRedundantZoneWidget = (
+  widget: FlattenedWidgetProps,
+  parentSection: FlattenedWidgetProps,
+): boolean =>
+  isZoneWidget(widget) &&
+  isEmptyWidget(widget) &&
+  // Check that the zone is the only child of the parent section.
+  widgetChildren(parentSection).length === 1 &&
+  !hasWidgetJsPropertiesEnabled(widget);

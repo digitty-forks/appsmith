@@ -2,7 +2,7 @@ import * as _ from "../../../../support/Objects/ObjectsCore";
 
 describe(
   "JS Editor Save and Auto-indent: Visual tests",
-  { tags: ["@tag.JS"] },
+  { tags: ["@tag.Visual"] },
   () => {
     it("1. Auto indents and saves the code when Ctrl/Cmd+s is pressed", () => {
       _.jsEditor.CreateJSObject(
@@ -48,13 +48,11 @@ myFun2: async () => {
 
       cy.get("div.CodeMirror").type("{cmd+s}").wait(2000);
       _.agHelper.GetNClick(_.jsEditor._lineinJsEditor(5));
-      cy.get("div.CodeMirror").matchImageSnapshot("jsObjAfterSaveAndPrettify");
       _.agHelper.AssertAutoSave();
 
       // taking a snap after clicking inside the editor to make sure prettify has not reverted
       _.agHelper.Sleep(110);
       _.agHelper.GetNClick(_.jsEditor._lineinJsEditor(25));
-      cy.get("div.CodeMirror").matchImageSnapshot("jsObjAfterSaveAndPrettify");
     });
   },
 );

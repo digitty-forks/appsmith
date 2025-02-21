@@ -1,4 +1,7 @@
-import { PageLeftPane } from "../../../../../support/Pages/EditorNavigation";
+import {
+  PageLeftPane,
+  PagePaneSegment,
+} from "../../../../../support/Pages/EditorNavigation";
 
 const formWidgetsPage = require("../../../../../locators/FormWidgets.json");
 const publish = require("../../../../../locators/publishWidgetspage.json");
@@ -12,13 +15,14 @@ import {
 
 describe(
   "Radio Widget Functionality",
-  { tags: ["@tag.Widget", "@tag.Radio"] },
+  { tags: ["@tag.Widget", "@tag.Radio", "@tag.Binding"] },
   function () {
     before(() => {
       agHelper.AddDsl("newFormDsl");
     });
 
     it("1. Radio Widget Functionality", function () {
+      PageLeftPane.switchSegment(PagePaneSegment.UI);
       PageLeftPane.expandCollapseItem("Container3");
       propPane.RenameWidget("RadioGroup1", "RGtest");
       /**

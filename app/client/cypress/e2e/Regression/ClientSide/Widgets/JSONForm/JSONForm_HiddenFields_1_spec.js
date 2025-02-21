@@ -45,7 +45,7 @@ function hideAndVerifyProperties(fieldName, fieldValue, resolveFieldValue) {
   });
 
   // Show field
-  cy.togglebar(".t--property-control-visible input");
+  agHelper.CheckUncheck(widgetsPage.visible);
 
   // Check if visible
   cy.get(`${fieldPrefix}-${fieldName}`).should("exist");
@@ -89,7 +89,7 @@ function removeCustomField() {
 
 describe(
   "JSON Form Hidden fields",
-  { tags: ["@tag.Widget", "@tag.JSONForm"] },
+  { tags: ["@tag.Widget", "@tag.JSONForm", "@tag.Binding"] },
   () => {
     before(() => {
       agHelper.AddDsl("jsonFormDslWithSchema");

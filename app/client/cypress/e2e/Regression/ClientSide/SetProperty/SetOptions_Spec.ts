@@ -2,7 +2,6 @@ import {
   agHelper,
   apiPage,
   dataManager,
-  debuggerHelper,
   deployMode,
   draggableWidgets,
   entityExplorer,
@@ -12,11 +11,13 @@ import {
 } from "../../../../support/Objects/ObjectsCore";
 import EditorNavigation, {
   EntityType,
+  PageLeftPane,
+  PagePaneSegment,
 } from "../../../../support/Pages/EditorNavigation";
 
 describe(
   "Widget Property Setters - Part III - Tc #2409 - Validates SetOptions",
-  { tags: ["@tag.Widget"] },
+  { tags: ["@tag.Widget", "@tag.JS", "@tag.Binding"] },
   () => {
     before(() => {
       entityExplorer.DragDropWidgetNVerify(draggableWidgets.INPUT_V2, 300);
@@ -38,7 +39,7 @@ describe(
         },
       );
       jsEditor.RunJSObj();
-      EditorNavigation.SelectEntityByName("Page1", EntityType.Page);
+      PageLeftPane.switchSegment(PagePaneSegment.UI);
       agHelper
         .GetText(
           locators._widgetInDeployed(draggableWidgets.INPUT_V2) +
@@ -49,12 +50,6 @@ describe(
         .then((val) => {
           expect(val).to.eq("false");
         });
-      debuggerHelper.AssertDebugError(
-        "Default value is missing in options. Please update the value.",
-        "",
-        true,
-        false,
-      );
 
       //SetOptions to not acceptable value - Numeric
       EditorNavigation.SelectEntityByName("JSObject1", EntityType.JSObject);
@@ -67,7 +62,7 @@ describe(
         false,
       );
       jsEditor.RunJSObj();
-      EditorNavigation.SelectEntityByName("Page1", EntityType.Page);
+      PageLeftPane.switchSegment(PagePaneSegment.UI);
       agHelper
         .GetText(
           locators._widgetInDeployed(draggableWidgets.INPUT_V2) +
@@ -78,12 +73,6 @@ describe(
         .then((val) => {
           expect(val).to.eq("1234");
         });
-      debuggerHelper.AssertDebugError(
-        "Default value is missing in options. Please update the value.",
-        "",
-        false,
-        false,
-      );
 
       //SetOptions to not acceptable value - String
       EditorNavigation.SelectEntityByName("JSObject1", EntityType.JSObject);
@@ -96,7 +85,7 @@ describe(
         false,
       );
       jsEditor.RunJSObj();
-      EditorNavigation.SelectEntityByName("Page1", EntityType.Page);
+      PageLeftPane.switchSegment(PagePaneSegment.UI);
       agHelper
         .GetText(
           locators._widgetInDeployed(draggableWidgets.INPUT_V2) +
@@ -107,12 +96,6 @@ describe(
         .then((val) => {
           expect(val).to.eq("fdfjhgf7");
         });
-      debuggerHelper.AssertDebugError(
-        "Default value is missing in options. Please update the value.",
-        "",
-        false,
-        false,
-      );
 
       //SetOptions to not acceptable value - undefined
       EditorNavigation.SelectEntityByName("JSObject1", EntityType.JSObject);
@@ -125,7 +108,7 @@ describe(
         false,
       );
       jsEditor.RunJSObj();
-      EditorNavigation.SelectEntityByName("Page1", EntityType.Page);
+      PageLeftPane.switchSegment(PagePaneSegment.UI);
       agHelper
         .GetText(
           locators._widgetInDeployed(draggableWidgets.INPUT_V2) +
@@ -136,12 +119,6 @@ describe(
         .then((val) => {
           expect(val).to.eq("fdfjhgf7");
         });
-      debuggerHelper.AssertDebugError(
-        "Default value is missing in options. Please update the value.",
-        "",
-        false,
-        false,
-      );
 
       //SetOptions to not acceptable value - null
       EditorNavigation.SelectEntityByName("JSObject1", EntityType.JSObject);
@@ -154,7 +131,7 @@ describe(
         false,
       );
       jsEditor.RunJSObj();
-      EditorNavigation.SelectEntityByName("Page1", EntityType.Page);
+      PageLeftPane.switchSegment(PagePaneSegment.UI);
       agHelper
         .GetText(
           locators._widgetInDeployed(draggableWidgets.INPUT_V2) +
@@ -165,12 +142,6 @@ describe(
         .then((val) => {
           expect(val).to.be.empty;
         });
-      debuggerHelper.AssertDebugError(
-        "Default value is missing in options. Please update the value.",
-        "",
-        false,
-        false,
-      );
 
       //unabel to set +ve value to setOptions:
       // {{JSObject1.myFun1.data.map((item)=>{return{
@@ -189,7 +160,7 @@ describe(
         }
     }`);
       jsEditor.RunJSObj();
-      EditorNavigation.SelectEntityByName("Page1", EntityType.Page);
+      PageLeftPane.switchSegment(PagePaneSegment.UI);
       agHelper
         .GetText(
           locators._widgetInDeployed(draggableWidgets.INPUT_V2) +

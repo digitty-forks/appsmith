@@ -3,7 +3,6 @@ import EditorNavigation, {
 } from "../../../../support/Pages/EditorNavigation";
 
 const publishPage = require("../../../../locators/publishWidgetspage.json");
-const queryLocators = require("../../../../locators/QueryEditor.json");
 const datasource = require("../../../../locators/DatasourcesEditor.json");
 import {
   agHelper,
@@ -13,18 +12,19 @@ import {
 
 describe(
   "API Panel Test Functionality",
-  { tags: ["@tag.Datasource"] },
+  { tags: ["@tag.Datasource", "@tag.Git", "@tag.AccessControl"] },
   function () {
     let datasourceName;
+
     before(() => {
       agHelper.AddDsl("executionParamsDsl");
     });
     beforeEach(() => {
-      cy.startRoutesForDatasource();
+      dataSources.StartDataSourceRoutes();
     });
     it("1. Create a postgres datasource", function () {
       cy.NavigateToDatasourceEditor();
-      cy.get(datasource.PostgreSQL).click();
+      agHelper.GetNClick(datasource.PostgreSQL);
       cy.fillPostgresDatasourceForm();
       cy.testSaveDatasource();
       cy.get("@saveDatasource").then((httpResponse) => {
@@ -36,9 +36,7 @@ describe(
       dataSources.CreateQueryAfterDSSaved(
         "select * from {{ this.params.tableName || 'users' }} limit 10",
       );
-      cy.get(queryLocators.settings).click({ force: true });
-      cy.get(queryLocators.switch).last().click({ force: true });
-      cy.xpath(queryLocators.query).click({ force: true });
+      dataSources.ToggleUsePreparedStatement(false);
       cy.runQuery();
     });
 

@@ -13,20 +13,15 @@ import EditorNavigation, {
   AppSidebar,
   AppSidebarButton,
   EntityType,
-  PageLeftPane,
 } from "../../../../support/Pages/EditorNavigation";
 
 describe(
   "Character Datatype tests",
-  { tags: ["@tag.Datasource"] },
+  { tags: ["@tag.Datasource", "@tag.Git", "@tag.AccessControl"] },
   function () {
     let dsName: any, query: string;
 
     before("Create Postgress DS", () => {
-      featureFlagIntercept({
-        ab_gsheet_schema_enabled: true,
-        ab_mock_mongo_schema_enabled: true,
-      });
       agHelper.AddDsl("Datatypes/CharacterDTdsl");
       appSettings.OpenPaneAndChangeTheme("Pacific");
       dataSources.CreateDataSource("Postgres");
@@ -56,7 +51,7 @@ describe(
           expect($noRecMsg).to.eq("No data records to show"),
         );
       dataSources.EnterQuery(query);
-      agHelper.RenameWithInPane("selectRecords");
+      agHelper.RenameQuery("selectRecords");
     });
 
     it("3. Creating all queries - chartypes", () => {
@@ -68,7 +63,7 @@ describe(
         "Insert",
       );
       dataSources.EnterQuery(query);
-      agHelper.RenameWithInPane("insertRecord");
+      agHelper.RenameQuery("insertRecord");
 
       query = `UPDATE public."chartypes" SET
     "One(1)" = {{Updateone.text}},
@@ -82,7 +77,7 @@ describe(
         "Update",
       );
       dataSources.EnterQuery(query);
-      agHelper.RenameWithInPane("updateRecord");
+      agHelper.RenameQuery("updateRecord");
 
       query = `DELETE FROM public."chartypes"`;
       dataSources.createQueryWithDatasourceSchemaTemplate(
@@ -91,7 +86,7 @@ describe(
         "Delete",
       );
       dataSources.EnterQuery(query);
-      agHelper.RenameWithInPane("deleteAllRecords");
+      agHelper.RenameQuery("deleteAllRecords");
 
       query = `drop table public."chartypes"`;
       dataSources.createQueryWithDatasourceSchemaTemplate(
@@ -100,7 +95,7 @@ describe(
         "Delete",
       );
       dataSources.EnterQuery(query);
-      agHelper.RenameWithInPane("dropTable");
+      agHelper.RenameQuery("dropTable");
 
       query = `DELETE FROM public."chartypes" WHERE serialId = {{Table1.selectedRow.serialid}};`;
       dataSources.createQueryWithDatasourceSchemaTemplate(
@@ -109,9 +104,7 @@ describe(
         "Delete",
       );
       dataSources.EnterQuery(query);
-      agHelper.RenameWithInPane("deleteRecord");
-
-      PageLeftPane.expandCollapseItem("Queries/JS", false);
+      agHelper.RenameQuery("deleteRecord");
     });
 
     it("4. Inserting record (null values) - chartypes", () => {
@@ -386,18 +379,15 @@ describe(
       dataSources.ReadQueryTableResponse(0).then(($cellData) => {
         expect($cellData).to.eq("0"); //Success response for dropped table!
       });
-      PageLeftPane.expandCollapseItem("Queries/JS", false);
       dataSources.AssertTableInVirtuosoList(dsName, "public.chartypes", false);
     });
 
     it("15. Verify Deletion of the datasource after all created queries are deleted", () => {
       dataSources.DeleteDatasourceFromWithinDS(dsName, 409); //Since all queries exists
       AppSidebar.navigate(AppSidebarButton.Editor);
-      PageLeftPane.expandCollapseItem("Queries/JS");
       entityExplorer.DeleteAllQueriesForDB(dsName);
       deployMode.DeployApp();
       deployMode.NavigateBacktoEditor();
-      PageLeftPane.expandCollapseItem("Queries/JS");
       dataSources.DeleteDatasourceFromWithinDS(dsName, 200); //ProductLines, Employees pages are still using this ds
     });
   },

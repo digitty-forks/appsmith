@@ -2,12 +2,14 @@ import { agHelper, dataSources } from "../../../support/Objects/ObjectsCore";
 
 describe(
   "Arango datasource test cases",
-  { tags: ["@tag.Datasource", "@tag.Sanity"] },
+  {
+    tags: ["@tag.Datasource", "@tag.Sanity", "@tag.Git", "@tag.AccessControl"],
+  },
   function () {
     it("1. Create, test, save then delete a Arango datasource", function () {
       dataSources.NavigateToDSCreateNew();
       dataSources.CreatePlugIn("ArangoDB");
-      agHelper.RenameWithInPane("ArangoWithnoTrailing", false);
+      agHelper.RenameDatasource("ArangoWithnoTrailing");
       cy.fillArangoDBDatasourceForm();
       cy.intercept("POST", "/api/v1/datasources/test", {
         fixture: "testAction.json",
@@ -19,7 +21,7 @@ describe(
     it("2. Create with trailing white spaces in host address and database name, test, save then delete a Arango datasource", function () {
       dataSources.NavigateToDSCreateNew();
       dataSources.CreatePlugIn("ArangoDB");
-      agHelper.RenameWithInPane("ArangoWithTrailing", false);
+      agHelper.RenameDatasource("ArangoWithTrailing");
       cy.fillArangoDBDatasourceForm(true);
       cy.intercept("POST", "/api/v1/datasources/test", {
         fixture: "testAction.json",
@@ -46,6 +48,13 @@ describe(
         .GetText(dataSources._databaseName, "val")
         .then(($dbName) => expect($dbName).to.eq("_system"));
       dataSources.SaveDSFromDialog(false);
+    });
+
+    it("5. Verify the default port for the datasource", function () {
+      dataSources.NavigateToDSCreateNew();
+      dataSources.CreatePlugIn("ArangoDB");
+
+      agHelper.AssertAttribute(dataSources._port, "value", "8529");
     });
   },
 );

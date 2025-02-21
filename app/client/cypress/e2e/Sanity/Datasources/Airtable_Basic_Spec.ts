@@ -17,7 +17,15 @@ import EditorNavigation, {
 let dsName: any, jsonSpecies: any, offset: any, insertedRecordId: any;
 describe(
   "Validate Airtable Ds",
-  { tags: ["@tag.Datasource", "@tag.Sanity", "@tag.excludeForAirgap"] },
+  {
+    tags: [
+      "@tag.Datasource",
+      "@tag.Sanity",
+      "@tag.excludeForAirgap",
+      "@tag.Git",
+      "@tag.AccessControl",
+    ],
+  },
   () => {
     before("Create a new Airtable DS", () => {
       dataSources.CreateDataSource("Airtable", true, false);
@@ -36,7 +44,7 @@ describe(
 
       //List all records
       dataSources.ValidateNSelectDropdown(
-        "Commands",
+        "Command",
         "Please select an option",
         "List records",
       );
@@ -292,7 +300,7 @@ describe(
 
       //Create
       dataSources.ValidateNSelectDropdown(
-        "Commands",
+        "Command",
         "List records",
         "Create records",
       );
@@ -313,7 +321,7 @@ describe(
         //Retrieve a record
         insertedRecordId = jsonSpecies.records[0].id;
         dataSources.ValidateNSelectDropdown(
-          "Commands",
+          "Command",
           "Create records",
           "Retrieve a record",
         );
@@ -340,7 +348,7 @@ describe(
 
         //Update Records
         dataSources.ValidateNSelectDropdown(
-          "Commands",
+          "Command",
           "Retrieve a record",
           "Update records",
         );
@@ -377,7 +385,7 @@ describe(
         //Delete A record
         //insertedRecordId = jsonSpecies.id;
         dataSources.ValidateNSelectDropdown(
-          "Commands",
+          "Command",
           "Update records",
           "Delete a record",
         );

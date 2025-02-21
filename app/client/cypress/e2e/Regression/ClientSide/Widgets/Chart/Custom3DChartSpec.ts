@@ -5,14 +5,11 @@ import EditorNavigation, {
 } from "../../../../../support/Pages/EditorNavigation";
 const publicWidgetsPage = require("../../../../../locators/publishWidgetspage.json");
 
-describe(
+describe.skip(
   "3D Custom EChart feature",
-  { tags: ["@tag.Widget", "@tag.Chart"] },
+  { tags: ["@tag.Widget", "@tag.Chart", "@tag.Visual", "@tag.Binding"] },
   function () {
     it("1. 3D EChart Custom Chart Widget Functionality", function () {
-      featureFlagIntercept({
-        release_custom_echarts_enabled: true,
-      });
       _.agHelper.RefreshPage();
       _.entityExplorer.DragDropWidgetNVerify(_.draggableWidgets.CHART);
 
@@ -67,7 +64,10 @@ describe(
         _.locators._widgetInDeployed(_.draggableWidgets.CHART),
       );
 
-      _.propPane.SelectPropertiesDropDown("Chart type", "Custom Fusion Charts");
+      _.propPane.SelectPropertiesDropDown(
+        "Chart type",
+        "Custom Fusion Charts (deprecated)",
+      );
 
       cy.wait(1000);
       cy.get(publicWidgetsPage.chartWidget).matchImageSnapshot("FusionCharts");

@@ -1,16 +1,14 @@
 import * as _ from "../../../../../support/Objects/ObjectsCore";
-const explorer = require("../../../../../locators/explorerlocators.json");
 
 describe(
   "Multi Tree Select Widget",
-  { tags: ["@tag.Widget", "@tag.Multiselect"] },
+  { tags: ["@tag.Widget", "@tag.Multiselect", "@tag.Binding"] },
   function () {
     before(() => {
       _.agHelper.AddDsl("emptyDSL");
     });
 
     it("Add new widget", () => {
-      cy.get(explorer.addWidget).click();
       cy.dragAndDropToCanvas("multiselecttreewidget", { x: 300, y: 300 });
       cy.get(".t--widget-multiselecttreewidget").should("exist");
     });

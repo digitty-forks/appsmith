@@ -1,13 +1,13 @@
 import type { ErrorActionPayload } from "sagas/ErrorSagas";
 import type { ActionResponse } from "api/ActionAPI";
-import { PluginType } from "entities/Action";
+import { PluginType } from "entities/Plugin";
 import queryActionSettingsConfig from "constants/AppsmithActionConstants/formConfig/QuerySettingsConfig";
 import apiActionSettingsConfig from "constants/AppsmithActionConstants/formConfig/ApiSettingsConfig";
 import apiActionEditorConfig from "constants/AppsmithActionConstants/formConfig/ApiEditorConfigs";
 import saasActionSettingsConfig from "constants/AppsmithActionConstants/formConfig/GoogleSheetsSettingsConfig";
 import apiActionDependencyConfig from "constants/AppsmithActionConstants/formConfig/ApiDependencyConfigs";
 import apiActionDatasourceFormButtonConfig from "constants/AppsmithActionConstants/formConfig/ApiDatasourceFormsButtonConfig";
-import type { EntityTypeValue } from "@appsmith/entities/DataTree/types";
+import type { EntityTypeValue } from "ee/entities/DataTree/types";
 
 export interface ExecuteActionPayloadEvent {
   type: EventType;
@@ -26,6 +26,7 @@ export interface TriggerSource {
   isJSAction?: boolean;
   actionId?: string;
 }
+
 export enum TriggerKind {
   EVENT_EXECUTION = "EVENT_EXECUTION", // Eg. Button onClick
   JS_FUNCTION_EXECUTION = "JS_FUNCTION_EXECUTION", // Executing js function from jsObject page
@@ -34,7 +35,7 @@ export enum TriggerKind {
 export interface ExecuteTriggerPayload {
   dynamicString: string;
   event: ExecuteActionPayloadEvent;
-  callbackData?: Array<any>;
+  callbackData?: Array<unknown>;
   triggerPropertyName?: string;
   source?: TriggerSource;
   widgetId?: string;
@@ -71,6 +72,7 @@ export enum EventType {
   ON_TOGGLE = "ON_TOGGLE",
   ON_LOAD = "ON_LOAD",
   ON_MODAL_CLOSE = "ON_MODAL_CLOSE",
+  ON_MODAL_SUBMIT = "ON_MODAL_SUBMIT",
   ON_TEXT_CHANGE = "ON_TEXT_CHANGE",
   ON_SUBMIT = "ON_SUBMIT",
   ON_CHECK_CHANGE = "ON_CHECK_CHANGE",
@@ -164,6 +166,8 @@ export const POSTMAN = "POSTMAN";
 export const CURL = "CURL";
 export const Swagger = "Swagger";
 
+// TODO: Fix this the next time the file is edited
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const defaultActionSettings: Record<PluginType, any> = {
   [PluginType.API]: apiActionSettingsConfig,
   [PluginType.DB]: queryActionSettingsConfig,
@@ -171,8 +175,12 @@ export const defaultActionSettings: Record<PluginType, any> = {
   [PluginType.REMOTE]: saasActionSettingsConfig,
   [PluginType.JS]: [],
   [PluginType.AI]: saasActionSettingsConfig,
+  [PluginType.INTERNAL]: saasActionSettingsConfig,
+  [PluginType.EXTERNAL_SAAS]: saasActionSettingsConfig,
 };
 
+// TODO: Fix this the next time the file is edited
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const defaultActionEditorConfigs: Record<PluginType, any> = {
   [PluginType.API]: apiActionEditorConfig,
   [PluginType.DB]: [],
@@ -180,6 +188,8 @@ export const defaultActionEditorConfigs: Record<PluginType, any> = {
   [PluginType.REMOTE]: [],
   [PluginType.JS]: [],
   [PluginType.AI]: [],
+  [PluginType.INTERNAL]: [],
+  [PluginType.EXTERNAL_SAAS]: [],
 };
 
 export const defaultActionDependenciesConfig: Record<
@@ -192,6 +202,8 @@ export const defaultActionDependenciesConfig: Record<
   [PluginType.REMOTE]: {},
   [PluginType.JS]: {},
   [PluginType.AI]: {},
+  [PluginType.INTERNAL]: {},
+  [PluginType.EXTERNAL_SAAS]: {},
 };
 
 export const defaultDatasourceFormButtonConfig: Record<PluginType, string[]> = {
@@ -201,4 +213,6 @@ export const defaultDatasourceFormButtonConfig: Record<PluginType, string[]> = {
   [PluginType.REMOTE]: apiActionDatasourceFormButtonConfig.REMOTE,
   [PluginType.JS]: [],
   [PluginType.AI]: apiActionDatasourceFormButtonConfig.AI,
+  [PluginType.INTERNAL]: [],
+  [PluginType.EXTERNAL_SAAS]: apiActionDatasourceFormButtonConfig.EXTERNAL_SAAS,
 };

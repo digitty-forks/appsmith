@@ -14,7 +14,7 @@ import {
 
 describe(
   "Table Widget V2 property pane feature validation",
-  { tags: ["@tag.Widget", "@tag.Table"] },
+  { tags: ["@tag.Widget", "@tag.Table", "@tag.Binding"] },
   function () {
     before(() => {
       agHelper.AddDsl("tableV2NewDsl");
@@ -256,7 +256,7 @@ describe(
       cy.wait(1000);
       cy.moveToContentTab();
       cy.wait(500);
-      cy.get(".t--property-control-disabled input").click({
+      cy.get(widgetsPage.selectWidgetDisabled).click({
         force: true,
       });
       //cy.closePropertyPane();

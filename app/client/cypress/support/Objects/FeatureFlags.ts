@@ -1,9 +1,16 @@
 import { LICENSE_FEATURE_FLAGS } from "../Constants";
+import { ObjectsRegistry } from "./Registry";
+
+const defaultFlags = {
+  rollout_remove_feature_walkthrough_enabled: false, // remove this flag from here when it's removed from code
+  release_git_modularisation_enabled: true,
+};
 
 export const featureFlagIntercept = (
   flags: Record<string, boolean> = {},
   reload = true,
 ) => {
+  getConsolidatedDataApi({ ...flags, ...defaultFlags }, false);
   const response = {
     responseMeta: {
       status: 200,
@@ -11,15 +18,38 @@ export const featureFlagIntercept = (
     },
     data: {
       ...flags,
-      release_app_sidebar_enabled: true,
+      ...defaultFlags,
     },
     errorDisplay: "",
   };
   cy.intercept("GET", "/api/v1/users/features", response);
-  if (reload) {
-    cy.reload();
-    cy.wait(2000); //for the page to re-load finish for CI runs
-  }
+  if (reload) ObjectsRegistry.AggregateHelper.CypressReload();
+};
+
+export const getConsolidatedDataApi = (
+  flags: Record<string, boolean> = {},
+  reload = true,
+) => {
+  cy.intercept("GET", "/api/v1/consolidated-api/*?*", (req) => {
+    delete req.headers["if-none-match"];
+    req.reply((res: any) => {
+      if (
+        res.statusCode === 200 ||
+        res.statusCode === 401 ||
+        res.statusCode === 500
+      ) {
+        const originalResponse = res?.body;
+        try {
+          const updatedResponse = JSON.parse(JSON.stringify(originalResponse));
+          updatedResponse.data.featureFlags.data = { ...flags };
+          return res.send(updatedResponse);
+        } catch (e) {
+          cy.log(`vamsi error `, e);
+        }
+      }
+    });
+  }).as("getConsolidatedData");
+  if (reload) ObjectsRegistry.AggregateHelper.CypressReload();
 };
 
 export const featureFlagInterceptForLicenseFlags = () => {
@@ -54,6 +84,26 @@ export const featureFlagInterceptForLicenseFlags = () => {
       });
     },
   ).as("getLicenseFeatures");
-  cy.reload();
-  cy.wait(2000); //for the page to re-load finish for CI runs
+
+  cy.intercept("GET", "/api/v1/consolidated-api/*?*", (req) => {
+    req.reply((res: any) => {
+      delete req.headers["if-none-match"];
+      if (res.statusCode === 200) {
+        const originalResponse = res?.body;
+        const updatedResponse = JSON.parse(JSON.stringify(originalResponse));
+        updatedResponse.data.featureFlags.data = {};
+        Object.keys(originalResponse.data.featureFlags.data).forEach((flag) => {
+          if (LICENSE_FEATURE_FLAGS.includes(flag)) {
+            updatedResponse.data.featureFlags.data[flag] =
+              originalResponse.data.featureFlags.data[flag];
+          }
+        });
+        updatedResponse.data.featureFlags.data["release_app_sidebar_enabled"] =
+          true;
+        return res.send(updatedResponse);
+      }
+    });
+  }).as("getConsolidatedData");
+
+  ObjectsRegistry.AggregateHelper.CypressReload();
 };

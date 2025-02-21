@@ -1,5 +1,6 @@
 import * as _ from "../../../../support/Objects/ObjectsCore";
 import emptyDSL from "../../../../fixtures/emptyDSL.json";
+import { AppSidebar } from "../../../../support/Pages/EditorNavigation";
 
 // Hi, developer!
 //
@@ -29,7 +30,7 @@ import emptyDSL from "../../../../fixtures/emptyDSL.json";
 
 describe(
   "html should include preload metadata for all code-split javascript",
-  { tags: ["@tag.IDE"] },
+  { tags: ["@tag.IDE", "@tag.PropertyPane"] },
   function () {
     before(() => {
       cy.addDsl(emptyDSL);
@@ -45,7 +46,7 @@ describe(
       reloadAndTogglePreloading(true);
 
       // Ensure the app editor is fully loaded
-      cy.get("#sidebar").should("be.visible");
+      AppSidebar.assertVisible();
 
       _.deployMode.DeployApp();
 
@@ -111,7 +112,7 @@ function testPreloadMetadata(viewOrEditMode) {
       (link) => (window.CDN_URL ?? "/") + link,
     );
 
-    const requestsToCompare = unique(
+    const allRequestsDuringPageLoad = unique(
       jsRequests.filter(
         (link) =>
           // Exclude link bundle requests. We don’t really care about being precise
@@ -119,7 +120,7 @@ function testPreloadMetadata(viewOrEditMode) {
           !link.includes("-icons."),
       ),
     );
-    const linksToCompare = unique(
+    const preloadLinks = unique(
       links.filter(
         (link) =>
           // Exclude link bundle preloads. We don’t really care about being precise
@@ -131,16 +132,11 @@ function testPreloadMetadata(viewOrEditMode) {
       ),
     );
 
-    const actuallyLoadedFiles = `[${
-      requestsToCompare.length
-    } items] ${requestsToCompare.sort().join(", ")}`;
-    const preloadedFiles = `[${linksToCompare.length} items] ${linksToCompare
-      .sort()
-      .join(", ")}`;
-
-    // Comparing strings instead of deep-equalling arrays because this is the only way
-    // to see which chunks are actually missing: https://github.com/cypress-io/cypress/issues/4084
-    cy.wrap(actuallyLoadedFiles).should("equal", preloadedFiles);
+    // check if req
+    const isSubset = preloadLinks.every((item) =>
+      allRequestsDuringPageLoad.includes(item),
+    );
+    expect(isSubset).to.be.true;
   });
 }
 

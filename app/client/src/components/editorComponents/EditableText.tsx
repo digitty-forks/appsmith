@@ -6,7 +6,14 @@ import {
 } from "@blueprintjs/core";
 import styled from "styled-components";
 import _ from "lodash";
-import { Button, toast, Tooltip } from "design-system";
+import {
+  Button,
+  Spinner,
+  toast,
+  Tooltip,
+  type ButtonSizes,
+} from "@appsmith/ads";
+import { INVALID_NAME_ERROR, createMessage } from "ee/constants/messages";
 
 export enum EditInteractionKind {
   SINGLE,
@@ -38,6 +45,7 @@ interface EditableTextProps {
   minLines?: number;
   customErrorTooltip?: string;
   useFullWidth?: boolean;
+  iconSize?: ButtonSizes;
 }
 
 // using the !important keyword here is mandatory because a style is being applied to that element using the style attribute
@@ -53,6 +61,7 @@ const EditableTextWrapper = styled.div<{
     justify-content: flex-start;
     align-items: flex-start;
     width: 100%;
+
     & .${Classes.EDITABLE_TEXT} {
       background: ${(props) =>
         props.isEditing && !props.minimal
@@ -65,11 +74,13 @@ const EditableTextWrapper = styled.div<{
       max-width: 100%;
       overflow: hidden;
       display: flex;
+
       &:before,
       &:after {
         display: none;
       }
     }
+
     & div.${Classes.EDITABLE_TEXT_INPUT} {
       text-transform: none;
       width: 100%;
@@ -92,6 +103,7 @@ const TextContainer = styled.div<{
   color: var(--ads-v2-color-fg-emphasis-plus);
   display: flex;
   align-items: center;
+
   &&&& .${Classes.EDITABLE_TEXT} {
     & .${Classes.EDITABLE_TEXT_CONTENT} {
       &:hover {
@@ -100,6 +112,7 @@ const TextContainer = styled.div<{
       }
     }
   }
+
   &&& .${Classes.EDITABLE_TEXT_CONTENT}:hover {
     ${(props) =>
       props.underline
@@ -128,6 +141,7 @@ export function EditableText(props: EditableTextProps) {
     errorTooltipClass,
     forceDefault,
     hideEditIcon,
+    iconSize = "md",
     isEditingDefault,
     isInvalid,
     maxLength,
@@ -182,6 +196,8 @@ export function EditableText(props: EditableTextProps) {
     setError(false);
   }, [location.pathname]);
 
+  // TODO: Fix this the next time the file is edited
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const edit = (e: any) => {
     setIsEditing(true);
     e.preventDefault();
@@ -191,11 +207,12 @@ export function EditableText(props: EditableTextProps) {
     (_value: string) => {
       onBlur && onBlur();
       const _isInvalid = isInvalid ? isInvalid(_value) : false;
+
       if (!_isInvalid) {
         onTextChanged(_value);
         setIsEditing(false);
       } else {
-        toast.show(customErrorTooltip || "Invalid name", {
+        toast.show(customErrorTooltip || createMessage(INVALID_NAME_ERROR), {
           kind: "error",
         });
       }
@@ -206,11 +223,14 @@ export function EditableText(props: EditableTextProps) {
   const onInputchange = useCallback(
     (_value: string) => {
       let finalVal: string = _value;
+
       if (valueTransform) {
         finalVal = valueTransform(_value);
       }
+
       setValue(finalVal);
       const errorMessage = isInvalid && isInvalid(finalVal);
+
       if (errorMessage) {
         setError(true);
         setErrorMessage(errorMessage);
@@ -221,13 +241,8 @@ export function EditableText(props: EditableTextProps) {
     [valueTransform, isInvalid],
   );
 
-  const showEditIcon = !(
-    disabled ||
-    minimal ||
-    hideEditIcon ||
-    updating ||
-    isEditing
-  );
+  const showEditIcon = !(disabled || minimal || hideEditIcon || isEditing);
+
   return (
     <EditableTextWrapper
       isEditing={isEditing}
@@ -265,15 +280,18 @@ export function EditableText(props: EditableTextProps) {
             selectAllOnFocus
             value={value}
           />
-          {showEditIcon && (
-            <Button
-              className="t--action-name-edit-icon"
-              isIconButton
-              kind="tertiary"
-              size="md"
-              startIcon="pencil-line"
-            />
-          )}
+          {showEditIcon &&
+            (updating ? (
+              <Spinner size="md" />
+            ) : (
+              <Button
+                className="t--action-name-edit-icon"
+                isIconButton
+                kind="tertiary"
+                size={iconSize}
+                startIcon="pencil-line"
+              />
+            ))}
         </TextContainer>
       </Tooltip>
     </EditableTextWrapper>

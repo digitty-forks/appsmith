@@ -22,7 +22,7 @@ describe(
         locators._widgetInDeployed(draggableWidgets.BUTTON),
         0,
       );
-      agHelper.AssertElementLength(locators._selectedWidget, 1);
+      agHelper.AssertElementLength(locators._autoLayoutSelectedWidget, 1);
 
       //copying first button in first layer, which is center aligned
       agHelper.GetElement("body").type(`{${modifierKey}}{c}`);
@@ -49,7 +49,7 @@ describe(
         locators._widgetInDeployed(draggableWidgets.BUTTON),
         1,
       );
-      agHelper.AssertElementLength(locators._selectedWidget, 1);
+      agHelper.AssertElementLength(locators._autoLayoutSelectedWidget, 1);
 
       //copying second button in first layer, which is end aligned
       agHelper.GetElement("body").type(`{${modifierKey}}{c}`);
@@ -81,7 +81,7 @@ describe(
         locators._widgetInDeployed(draggableWidgets.BUTTON),
         0,
       );
-      agHelper.AssertElementLength(locators._selectedWidget, 1);
+      agHelper.AssertElementLength(locators._autoLayoutSelectedWidget, 1);
 
       //copying first button in first layer, which is center aligned
       agHelper.GetElement("body").type(`{${modifierKey}}{c}`);
@@ -90,7 +90,8 @@ describe(
       //unselect all widgets
       agHelper.GetNClick(locators._selectionCanvas("0"), 0, true);
 
-      agHelper.AssertElementLength(locators._selectedWidget, 0);
+      agHelper.AssertElementLength(locators._autoLayoutSelectedWidget, 0);
+      cy.focused().blur();
       //paste
       agHelper.GetElement("body").type(`{${modifierKey}}{v}`);
       agHelper.Sleep();
@@ -141,14 +142,16 @@ describe(
         500,
         true,
       );
-      agHelper.AssertElementLength(locators._selectedWidget, 4);
+      agHelper.AssertElementLength(locators._autoLayoutSelectedWidget, 4);
       agHelper.GetElement("body").type(`{${modifierKey}}{c}`);
       agHelper.GetElement(locators._toastMsg).contains("Copied");
 
       //unselect all widgets
       agHelper.GetNClick(locators._selectionCanvas("0"), 0, true);
+      cy.focused().blur();
 
-      agHelper.AssertElementLength(locators._selectedWidget, 0);
+      agHelper.AssertElementLength(locators._autoLayoutSelectedWidget, 0);
+
       //paste
       agHelper.GetElement("body").type(`{${modifierKey}}{v}`);
       agHelper.Sleep();

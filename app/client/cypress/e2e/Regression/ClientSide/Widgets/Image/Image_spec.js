@@ -4,12 +4,13 @@ const publish = require("../../../../../locators/publishWidgetspage.json");
 const widgetsPage = require("../../../../../locators/Widgets.json");
 import {
   agHelper,
+  dataManager,
   deployMode,
 } from "../../../../../support/Objects/ObjectsCore";
 
 describe(
   "Image Widget Functionality",
-  { tags: ["@tag.Widget", "@tag.Image"] },
+  { tags: ["@tag.Widget", "@tag.Image", "@tag.Binding"] },
   function () {
     before(() => {
       agHelper.AddDsl("displayWidgetDsl");
@@ -58,13 +59,13 @@ describe(
     it("3. Image Widget Functionality To Check/Uncheck Visible Widget", function () {
       deployMode.NavigateBacktoEditor();
       cy.openPropertyPane("imagewidget");
-      cy.togglebarDisable(commonlocators.visibleCheckbox);
+      agHelper.CheckUncheck(commonlocators.visibleCheckbox, false);
       deployMode.DeployApp();
       cy.get(publish.imageWidget).should("not.exist");
       deployMode.NavigateBacktoEditor();
       //Image Widget Functionality To Check Visible Widget", function () {
       cy.openPropertyPane("imagewidget");
-      cy.togglebar(commonlocators.visibleCheckbox);
+      agHelper.CheckUncheck(commonlocators.visibleCheckbox);
       deployMode.DeployApp(publish.imageWidget);
       deployMode.NavigateBacktoEditor();
     });
@@ -72,7 +73,8 @@ describe(
     it("4. In case of an image loading error, show off the error message", () => {
       cy.openPropertyPane("imagewidget");
       // Invalid image url
-      const invalidImageUrl = "https://www.example.com/does-not-exist.jpg";
+      const invalidImageUrl =
+        "http://host.docker.internal:4200/photo-not-exists.jpeg";
       cy.testCodeMirror(invalidImageUrl);
 
       // Show off error message

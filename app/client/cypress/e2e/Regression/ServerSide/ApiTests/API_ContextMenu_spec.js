@@ -1,27 +1,29 @@
 import EditorNavigation, {
   EntityType,
   PageLeftPane,
+  PagePaneSegment,
 } from "../../../../support/Pages/EditorNavigation";
 
 const testdata = require("../../../../fixtures/testdata.json");
 const apiwidget = require("../../../../locators/apiWidgetslocator.json");
 
 import {
+  agHelper,
   apiPage,
   entityExplorer,
 } from "../../../../support/Objects/ObjectsCore";
 
 describe(
   "API Panel Test Functionality ",
-  { tags: ["@tag.Datasource"] },
+  { tags: ["@tag.Datasource", "@tag.Git", "@tag.AccessControl"] },
   function () {
     it("1. Test API copy/Move/delete feature", function () {
       cy.Createpage("SecondPage");
       cy.CreateAPI("FirstAPI");
       cy.enterDatasourceAndPath(testdata.baseUrl, "{{ '/random' }}");
-      cy.assertPageSave();
+      agHelper.AssertAutoSave();
       cy.get("body").click(0, 0);
-      PageLeftPane.expandCollapseItem("Queries/JS");
+      PageLeftPane.switchSegment(PagePaneSegment.Queries);
       entityExplorer.ActionContextMenuByEntityName({
         entityNameinLeftSidebar: "FirstAPI",
         action: "Copy to page",

@@ -8,7 +8,7 @@ import {
 
 describe(
   "Validate Empty DS error messages",
-  { tags: ["@tag.Datasource"] },
+  { tags: ["@tag.Datasource", "@tag.Git", "@tag.AccessControl"] },
   () => {
     let dataSourceName: string;
 
@@ -22,33 +22,36 @@ describe(
       cy.get("@guid").then((uid) => {
         dataSources.CreatePlugIn("PostgreSQL");
         dataSourceName = "PostgreSQL" + " " + uid;
-        agHelper.RenameWithInPane(dataSourceName, false);
+        agHelper.RenameDatasource(dataSourceName);
 
         dataSources.TestDatasource(false);
-        agHelper.ValidateToastMessage("Missing endpoint.");
         agHelper.ValidateToastMessage("Missing username for authentication.");
+        agHelper.ValidateToastMessage("Missing hostname.");
         agHelper.ClearTextField(dataSources._databaseName);
         dataSources.TestDatasource(false);
         agHelper.ValidateToastMessage("Missing database name.");
         agHelper.WaitUntilAllToastsDisappear();
-        agHelper.UpdateInputValue(
+        agHelper.ClearNType(
           dataSources._host(),
           dataManager.dsValues[dataManager.defaultEnviorment].postgres_host,
         );
-        agHelper.UpdateInputValue(
+        agHelper.ClearNType(
+          dataSources._port,
+          dataManager.dsValues[
+            dataManager.defaultEnviorment
+          ].postgres_port.toString(),
+        );
+        agHelper.ClearNType(
           dataSources._databaseName,
           dataManager.dsValues[dataManager.defaultEnviorment]
             .postgres_databaseName,
         );
-        agHelper.UpdateInputValue(
+        agHelper.ClearNType(
           dataSources._username,
           dataManager.dsValues[dataManager.defaultEnviorment].postgres_username,
         );
         dataSources.TestDatasource(false);
-        agHelper.ValidateToastMessage(
-          "An exception occurred while creating connection pool. One or more arguments in the datasource configuration may be invalid.",
-        );
-        agHelper.ValidateToastMessage("Failed to initialize pool:");
+        agHelper.ValidateToastMessage("Missing password for authentication.");
         agHelper.GetNClick(locators._visibleTextSpan("Read only"));
         propPane.AssertPropertiesDropDownValues("SSL mode", [
           "Default",
@@ -58,11 +61,12 @@ describe(
           "Disable",
         ]);
         dataSources.ValidateNSelectDropdown("SSL mode", "Default", "Disable");
-        agHelper.UpdateInputValue(
+        agHelper.ClearNType(
           dataSources._password,
           dataManager.dsValues[dataManager.defaultEnviorment].postgres_password,
         );
         dataSources.TestSaveDatasource();
+        dataSources.selectTabOnDatasourcePage("Configurations");
         dataSources.AssertDataSourceInfo([
           "READ_ONLY",
           "host.docker.internal",
@@ -77,41 +81,38 @@ describe(
       cy.get("@guid").then((uid) => {
         dataSources.CreatePlugIn("MySQL");
         dataSourceName = "MySQL" + " " + uid;
-        agHelper.RenameWithInPane(dataSourceName, false);
+        agHelper.RenameDatasource(dataSourceName);
 
         dataSources.TestDatasource(false);
-        agHelper.ValidateToastMessage("Missing endpoint and url");
+        agHelper.ValidateToastMessage("Host value cannot be empty");
         agHelper.ValidateToastMessage("Missing username for authentication.");
         agHelper.ValidateToastMessage("Missing password for authentication.");
         agHelper.ClearTextField(dataSources._databaseName);
         dataSources.TestDatasource(false);
         agHelper.ValidateToastMessage("Missing database name.");
         agHelper.WaitUntilAllToastsDisappear();
-        agHelper.UpdateInputValue(
+        agHelper.ClearNType(
           dataSources._host(),
           dataManager.dsValues[dataManager.defaultEnviorment].mysql_host,
         );
-        agHelper.UpdateInputValue(
+        agHelper.ClearNType(
           dataSources._databaseName,
           dataManager.dsValues[dataManager.defaultEnviorment]
             .mysql_databaseName,
         );
-        agHelper.UpdateInputValue(
+        agHelper.ClearNType(
           dataSources._username,
           dataManager.dsValues[dataManager.defaultEnviorment].mysql_username,
         );
         dataSources.TestDatasource(false);
-        agHelper.ValidateToastMessage(
-          "Access denied for user 'root'@'172.17.0.1'",
-        );
-        agHelper.GetNClick(locators._visibleTextSpan("Read only"));
+        agHelper.ValidateToastMessage("Access denied for user");
         propPane.AssertPropertiesDropDownValues("SSL mode", [
           "Default",
           "Required",
           "Disabled",
         ]);
         dataSources.ValidateNSelectDropdown("SSL mode", "Default", "Required");
-        agHelper.UpdateInputValue(
+        agHelper.ClearNType(
           dataSources._password,
           dataManager.dsValues[dataManager.defaultEnviorment].mysql_password,
         );
@@ -121,11 +122,8 @@ describe(
         );
         dataSources.ValidateNSelectDropdown("SSL mode", "Required", "Disabled");
         dataSources.TestSaveDatasource();
-        dataSources.AssertDataSourceInfo([
-          "READ_ONLY",
-          "host.docker.internal",
-          "fakeapi",
-        ]);
+        dataSources.selectTabOnDatasourcePage("Configurations");
+        dataSources.AssertDataSourceInfo(["host.docker.internal", "fakeapi"]);
       });
     });
 
@@ -135,10 +133,12 @@ describe(
       cy.get("@guid").then((uid) => {
         dataSources.CreatePlugIn("MongoDB");
         dataSourceName = "MongoDB" + " " + uid;
-        agHelper.RenameWithInPane(dataSourceName, false);
+        agHelper.RenameDatasource(dataSourceName);
 
         dataSources.TestDatasource(false);
-        agHelper.ValidateToastMessage("Missing endpoint(s)");
+        agHelper.ValidateToastMessage(
+          "Connection timed out. Please check if the datasource configuration fields have been filled correctly.",
+        );
         dataSources.ValidateNSelectDropdown(
           "Use mongo connection string URI",
           "No",
@@ -148,7 +148,7 @@ describe(
         agHelper.ValidateToastMessage(
           "'Mongo Connection string URI' field is empty. Please edit the 'Mongo Connection URI' field to provide a connection uri to connect with.",
         );
-        agHelper.UpdateInputValue(
+        agHelper.ClearNType(
           locators._inputFieldByName("Connection string URI") + "//input",
           dataManager.mongo_uri(dataManager.defaultEnviorment),
         );
@@ -169,12 +169,14 @@ describe(
           "Replica set",
         );
         dataSources.TestDatasource(false);
-        agHelper.ValidateToastMessage("Missing endpoint(s)");
-        agHelper.UpdateInputValue(
+        agHelper.ValidateToastMessage(
+          "REPLICA_SET connections should not be given a port. If you are trying to specify all the shards, please add more than one.",
+        );
+        agHelper.ClearNType(
           dataSources._host(),
           dataManager.dsValues[dataManager.defaultEnviorment].mongo_host,
         );
-        agHelper.UpdateInputValue(
+        agHelper.ClearNType(
           dataSources._port,
           dataManager.dsValues[
             dataManager.defaultEnviorment
@@ -232,7 +234,7 @@ describe(
       cy.get("@guid").then((uid) => {
         dataSources.CreatePlugIn("Redis");
         dataSourceName = "Redis" + " " + uid;
-        agHelper.RenameWithInPane(dataSourceName, false);
+        agHelper.RenameDatasource(dataSourceName);
 
         dataSources.TestDatasource(false);
         agHelper.ValidateToastMessage(
@@ -253,7 +255,7 @@ describe(
       cy.get("@guid").then((uid) => {
         dataSources.CreatePlugIn("S3");
         dataSourceName = "S3" + " " + uid;
-        agHelper.RenameWithInPane(dataSourceName, false);
+        agHelper.RenameDatasource(dataSourceName);
 
         dataSources.TestDatasource(false);
         agHelper.ValidateToastMessage(

@@ -1,6 +1,9 @@
 import {
   agHelper,
   apiPage,
+  assertHelper,
+  dataManager,
+  dataSources,
   deployMode,
   entityExplorer,
   entityItems,
@@ -10,10 +13,11 @@ import {
 import EditorNavigation, {
   EntityType,
 } from "../../../../support/Pages/EditorNavigation";
+import BottomTabs from "../../../../support/Pages/IDE/BottomTabs";
 
 describe(
   "Layout OnLoad Actions tests",
-  { tags: ["@tag.PropertyPane", "@tag.JS"] },
+  { tags: ["@tag.PropertyPane", "@tag.JS", "@tag.Sanity", "@tag.Binding"] },
   function () {
     beforeEach(() => {
       agHelper.RestoreLocalStorageCache();
@@ -27,7 +31,8 @@ describe(
       agHelper.AddDsl("onPageLoadActionsDsl");
       EditorNavigation.SelectEntityByName("Page1", EntityType.Page);
       cy.url().then((url) => {
-        const pageid = url.split("/")[5]?.split("-").pop();
+        const pageid = agHelper.extractPageIdFromUrl(url);
+        expect(pageid).to.not.be.null;
         cy.log(pageid + "page id");
         cy.request("GET", "api/v1/pages/" + pageid).then((response) => {
           const respBody = JSON.stringify(response.body);
@@ -38,41 +43,48 @@ describe(
       });
     });
 
-    it("2. Bug 8595: OnPageLoad execution - when Query Parmas added via Params tab", function () {
+    //Open Bug: https://github.com/appsmithorg/appsmith/issues/38165
+    it.skip("2. Bug 8595: OnPageLoad execution - when Query Parmas added via Params tab", function () {
       agHelper.AddDsl("onPageLoadActionsDsl", locators._imageWidget);
       apiPage.CreateAndFillApi(
-        "https://source.unsplash.com/collection/1599413",
+        dataManager.dsValues[dataManager.defaultEnviorment].flowerImageUrl1,
         "RandomFlora",
-        30000,
       );
-      //apiPage.RunAPI();
 
       apiPage.CreateAndFillApi(
-        "https://randomuser.me/api/",
+        dataManager.dsValues[dataManager.defaultEnviorment].mockApiUrl,
         "RandomUser",
-        30000,
       );
-      //apiPage.RunAPI();
+
+      apiPage.RunAPI();
+      BottomTabs.response.selectResponseResponseTypeFromMenu("JSON");
 
       apiPage.CreateAndFillApi(
-        "https://favqs.com/api/qotd",
+        "http://host.docker.internal:5001/v1/favqs/qotd",
         "InspiringQuotes",
         30000,
       );
       apiPage.EnterHeader("dependency", "{{RandomUser.data}}"); //via Params tab
-      //apiPage.RunAPI();
+      apiPage.RunAPI();
+      BottomTabs.response.selectResponseResponseTypeFromMenu("JSON");
 
       apiPage.CreateAndFillApi(
-        "https://www.boredapi.com/api/activity",
+        "http://host.docker.internal:5001/v1/boredapi/activity",
         "Suggestions",
         30000,
       );
-      apiPage.EnterHeader("dependency", "{{InspiringQuotes.data}}");
-      //apiPage.RunAPI();
+      apiPage.EnterHeader("dependency", "{{InspiringQuotes.data.data}}");
+      apiPage.RunAPI();
+      BottomTabs.response.selectResponseResponseTypeFromMenu("JSON");
 
-      apiPage.CreateAndFillApi("https://api.genderize.io", "Genderize", 30000);
-      apiPage.EnterParams("name", "{{RandomUser.data.results[0].name.first}}"); //via Params tab
-      //apiPage.RunAPI();
+      apiPage.CreateAndFillApi(
+        "http://host.docker.internal:5001/v1/genderize/sampledata",
+        "Genderize",
+        30000,
+      );
+      apiPage.EnterParams("name", "{{RandomUser.data[0].name}}"); //via Params tab
+      apiPage.RunAPI();
+      BottomTabs.response.selectResponseResponseTypeFromMenu("JSON");
 
       //Adding dependency in right order matters!
       EditorNavigation.SelectEntityByName("Image1", EntityType.Widget);
@@ -81,95 +93,49 @@ describe(
       EditorNavigation.SelectEntityByName("Image2", EntityType.Widget);
       propPane.UpdatePropertyFieldValue(
         "Image",
-        `{{RandomUser.data.results[0].picture.large}}`,
+        `{{RandomUser.data[0].avatar}}`,
       );
 
       EditorNavigation.SelectEntityByName("Text1", EntityType.Widget);
       propPane.UpdatePropertyFieldValue(
         "Text",
-        `{{InspiringQuotes.data.quote.body}}\n--\n{{InspiringQuotes.data.quote.author}}\n`,
+        `{{InspiringQuotes.data.data.quote.body}}\n--\n{{InspiringQuotes.data.data.quote.author}}\n`,
       );
 
       EditorNavigation.SelectEntityByName("Text2", EntityType.Widget);
       propPane.UpdatePropertyFieldValue(
         "Text",
-        `Hi, here is {{RandomUser.data.results[0].name.first}} & I'm {{RandomUser.data.results[0].dob.age}}'yo\nI live in {{RandomUser.data.results[0].location.country}}\nMy Suggestion : {{Suggestions.data.activity}}\n\nI'm {{Genderize.data.gender}}`,
+        `Hi, here is {{RandomUser.data[0].name}} & I'm {{RandomUser.data[0].id}}'yo\nI live in {{RandomUser.data[0].address}}\nMy Suggestion : {{Suggestions.data.data.activity}}\n\nI'm {{Genderize.data.data.gender}}`,
       );
-
-      // cy.url().then((url) => {
-      //   const pageid = url.split("/")[4]?.split("-").pop();
-      //   cy.log(pageid + "page id");
-      //   cy.request("GET", "api/v1/pages/" + pageid).then((response) => {
-      //     const respBody = JSON.stringify(response.body);
-
-      //     const _randomFlora = JSON.parse(respBody).data.layouts[0]
-      //       .layoutOnLoadActions[0];
-      //     const _randomUser = JSON.parse(respBody).data.layouts[0]
-      //       .layoutOnLoadActions[1];
-      //     const _genderize = JSON.parse(respBody).data.layouts[0]
-      //       .layoutOnLoadActions[2];
-      //     const _suggestions = JSON.parse(respBody).data.layouts[0]
-      //       .layoutOnLoadActions[3];
-      //     // cy.log("_randomFlora is: " + JSON.stringify(_randomFlora))
-      //     // cy.log("_randomUser is: " + JSON.stringify(_randomUser))
-      //     // cy.log("_genderize is: " + JSON.stringify(_genderize))
-      //     // cy.log("_suggestions is: " + JSON.stringify(_suggestions))
-
-      //     expect(JSON.parse(JSON.stringify(_randomFlora))[0]["name"]).to.eq(
-      //       "RandomFlora",
-      //     );
-      //     expect(JSON.parse(JSON.stringify(_randomUser))[0]["name"]).to.eq(
-      //       "RandomUser",
-      //     );
-      //     expect(JSON.parse(JSON.stringify(_genderize))[0]["name"]).to.be.oneOf([
-      //       "Genderize",
-      //       "InspiringQuotes",
-      //     ]);
-      //     expect(JSON.parse(JSON.stringify(_genderize))[1]["name"]).to.be.oneOf([
-      //       "Genderize",
-      //       "InspiringQuotes",
-      //     ]);
-      //     expect(JSON.parse(JSON.stringify(_suggestions))[0]["name"]).to.eq(
-      //       "Suggestions",
-      //     );
-      //   });
-      // });
 
       deployMode.DeployApp(locators._widgetInDeployed("textwidget"), false);
       agHelper.Sleep(5000); //for all api's to ccomplete call!
-      cy.wait("@viewPage").then(($response) => {
+      assertHelper.AssertNetworkStatus("@getConsolidatedData");
+
+      cy.get("@getConsolidatedData").then(($response: any) => {
         const respBody = JSON.stringify($response.response?.body);
+        const { pageWithMigratedDsl } = JSON.parse(respBody)?.data;
 
-        const _randomFlora =
-          JSON.parse(respBody).data.layouts[0].layoutOnLoadActions[0];
-        const _randomUser =
-          JSON.parse(respBody).data.layouts[0].layoutOnLoadActions[1];
-        const _genderize =
-          JSON.parse(respBody).data.layouts[0].layoutOnLoadActions[2];
-        const _suggestions =
-          JSON.parse(respBody).data.layouts[0].layoutOnLoadActions[3];
-        // cy.log("_randomFlora is: " + JSON.stringify(_randomFlora))
-        // cy.log("_randomUser is: " + JSON.stringify(_randomUser))
-        // cy.log("_genderize is: " + JSON.stringify(_genderize))
-        // cy.log("_suggestions is: " + JSON.stringify(_suggestions))
+        // Extract the layoutOnLoadActions array from the first layout
+        const layoutActions =
+          pageWithMigratedDsl.data.layouts[0].layoutOnLoadActions;
 
-        expect(JSON.parse(JSON.stringify(_randomFlora))[0]["name"]).to.eq(
-          "RandomFlora",
-        );
-        expect(JSON.parse(JSON.stringify(_randomUser))[0]["name"]).to.eq(
-          "RandomUser",
-        );
-        expect(JSON.parse(JSON.stringify(_genderize))[0]["name"]).to.be.oneOf([
-          "Genderize",
-          "InspiringQuotes",
-        ]);
-        expect(JSON.parse(JSON.stringify(_genderize))[1]["name"]).to.be.oneOf([
-          "Genderize",
-          "InspiringQuotes",
-        ]);
-        expect(JSON.parse(JSON.stringify(_suggestions))[0]["name"]).to.eq(
-          "Suggestions",
-        );
+        // Get individual actions from the array
+        const _randomFlora = layoutActions[0][0]; // RandomFlora is the first action in the first array
+        const _randomUser = layoutActions[1][0]; // RandomUser is the first action in the second array
+        const _inspiringQuotes = layoutActions[2][0]; // InspiringQuotes is the first action in the third array
+        const _genderize = layoutActions[3][0]; // Genderize is the first action in the fourth array
+        const _suggestions = layoutActions[4][0]; // Suggestions is the first action in the fifth array
+
+        // Assertions for the API names
+        expect(_randomFlora.name).to.eq("RandomFlora");
+        expect(_randomUser.name).to.eq("RandomUser");
+
+        // Check if the name is either 'Genderize' or 'InspiringQuotes' for this position
+        expect(_inspiringQuotes.name).to.eq("InspiringQuotes");
+        expect(_genderize.name).to.eq("Genderize");
+
+        expect(_suggestions.name).to.eq("Suggestions");
       });
 
       deployMode.NavigateBacktoEditor();
@@ -177,7 +143,8 @@ describe(
       agHelper.AssertElementAbsence(locators._errorTab);
     });
 
-    it("3. Bug 10049, 10055: Dependency not executed in expected order in layoutOnLoadActions when dependency added via URL", function () {
+    //Open Bug: https://github.com/appsmithorg/appsmith/issues/38165
+    it.skip("3. Bug 10049, 10055: Dependency not executed in expected order in layoutOnLoadActions when dependency added via URL", function () {
       EditorNavigation.SelectEntityByName("Genderize", EntityType.Api);
       entityExplorer.ActionContextMenuByEntityName({
         entityNameinLeftSidebar: "Genderize",
@@ -186,45 +153,52 @@ describe(
       });
 
       apiPage.CreateAndFillApi(
-        "https://api.genderize.io?name={{RandomUser.data.results[0].name.first}}",
+        "http://host.docker.internal:5001/v1/genderize/sampledata?name={{RandomUser.data[0].name}}",
         "Genderize",
         30000,
+        "GET",
+        false,
+        false,
       );
       apiPage.ValidateQueryParams({
         key: "name",
-        value: "{{RandomUser.data.results[0].name.first}}",
+        value: "{{RandomUser.data[0].name}}",
       }); // verifies Bug 10055
+      apiPage.RunAPI();
+      BottomTabs.response.selectResponseResponseTypeFromMenu("JSON");
 
-      deployMode.DeployApp(locators._widgetInDeployed("textwidget"), false);
-      agHelper.Sleep(5000); //for all api's to ccomplete call!
-      cy.wait("@viewPage").then(($response) => {
+      deployMode.DeployApp(
+        locators._widgetInDeployed("textwidget"),
+        false,
+        false,
+      );
+      assertHelper.AssertNetworkStatus("@getConsolidatedData");
+
+      cy.get("@getConsolidatedData").then(($response: any) => {
         const respBody = JSON.stringify($response.response?.body);
-        const _randomFlora =
-          JSON.parse(respBody).data.layouts[0].layoutOnLoadActions[0];
-        const _randomUser =
-          JSON.parse(respBody).data.layouts[0].layoutOnLoadActions[1];
-        const _genderize =
-          JSON.parse(respBody).data.layouts[0].layoutOnLoadActions[2];
-        const _suggestions =
-          JSON.parse(respBody).data.layouts[0].layoutOnLoadActions[3];
+        const { pageWithMigratedDsl } = JSON.parse(respBody)?.data;
 
-        expect(JSON.parse(JSON.stringify(_randomFlora))[0]["name"]).to.eq(
-          "RandomFlora",
-        );
-        expect(JSON.parse(JSON.stringify(_randomUser))[0]["name"]).to.eq(
-          "RandomUser",
-        );
-        expect(JSON.parse(JSON.stringify(_genderize))[0]["name"]).to.be.oneOf([
-          "Genderize",
-          "InspiringQuotes",
-        ]);
-        expect(JSON.parse(JSON.stringify(_genderize))[1]["name"]).to.be.oneOf([
-          "Genderize",
-          "InspiringQuotes",
-        ]);
-        expect(JSON.parse(JSON.stringify(_suggestions))[0]["name"]).to.eq(
-          "Suggestions",
-        );
+        // Extract layoutOnLoadActions from the first layout
+        const layoutActions =
+          pageWithMigratedDsl.data.layouts[0].layoutOnLoadActions;
+
+        // Get the individual actions
+        const _randomFlora = layoutActions[0][0]; // First item in the first array
+        const _randomUser = layoutActions[1][0]; // First item in the second array
+        const _inspiringQuotes = layoutActions[2][0]; // First item in the third array
+        const _genderize = layoutActions[3][0]; // First item in the fourth array
+        const _suggestions = layoutActions[4][0]; // First item in the fifth array
+
+        // Assertions for the API names
+        expect(_randomFlora.name).to.eq("RandomFlora");
+        expect(_randomUser.name).to.eq("RandomUser");
+
+        // Check if the name is either 'Genderize' or 'InspiringQuotes' for these positions
+        expect(_inspiringQuotes.name).to.eq("InspiringQuotes");
+        expect(_genderize.name).to.eq("Genderize");
+
+        // Assertions for 'Suggestions'
+        expect(_suggestions.name).to.eq("Suggestions");
       });
     });
   },

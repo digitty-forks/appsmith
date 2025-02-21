@@ -1,4 +1,4 @@
-import type { CanvasWidgetsReduxState } from "reducers/entityReducers/canvasWidgetsReducer";
+import type { CanvasWidgetsReduxState } from "ee/reducers/entityReducers/canvasWidgetsReducer";
 import type {
   AnvilHighlightInfo,
   LayoutProps,
@@ -11,7 +11,33 @@ import LayoutFactory from "layoutSystems/anvil/layoutComponents/LayoutFactory";
 import { call } from "redux-saga/effects";
 
 import { severTiesFromParents, transformMovedWidgets } from "./moveUtils";
-import { anvilWidgets } from "widgets/anvil/constants";
+import { anvilWidgets } from "modules/ui-builder/ui/wds/constants";
+import { MAIN_CONTAINER_WIDGET_ID } from "constants/WidgetConstants";
+import { addNewAnvilWidgetToDSL } from "layoutSystems/anvil/integrations/sagas/anvilWidgetAdditionSagas/helpers";
+
+/**
+ * This function adds a detached widget to the main canvas.
+ * This is a different saga because we don't need to generate sections, zones, etc
+ * As well as the fact that all detached widgets are children of the MainContainer.
+ * @param allWidgets | CanvasWidgetsReduxState : All widgets in the canvas.
+ * @param draggedWidget | { widgetId: string; type: string } : Widget to be added.
+ * @returns CanvasWidgetsReduxState : Updated widgets.
+ */
+export function* addDetachedWidgetToMainCanvas(
+  allWidgets: CanvasWidgetsReduxState,
+  draggedWidget: { widgetId: string; type: string },
+) {
+  const updatedWidgets: CanvasWidgetsReduxState = yield addNewAnvilWidgetToDSL(
+    allWidgets,
+    {
+      widgetId: draggedWidget.widgetId,
+      type: draggedWidget.type,
+      parentId: MAIN_CONTAINER_WIDGET_ID,
+    },
+  );
+
+  return updatedWidgets;
+}
 
 export function* addWidgetsToMainCanvasLayout(
   allWidgets: CanvasWidgetsReduxState,
@@ -23,6 +49,7 @@ export function* addWidgetsToMainCanvasLayout(
    * Step 1: Get layout for MainCanvas.
    */
   let mainCanvasWidget: WidgetProps = allWidgets[highlight.canvasId];
+
   let mainCanvasPreset: LayoutProps[] = mainCanvasWidget.layout;
   let mainCanvasLayout: LayoutProps | undefined = getAffectedLayout(
     mainCanvasPreset,
@@ -39,14 +66,15 @@ export function* addWidgetsToMainCanvasLayout(
   /**
    * Step 3: Add section widgets to the MainCanvasLayout.
    */
-  sections.forEach((section: WidgetLayoutProps) => {
+  sections.forEach((section: WidgetLayoutProps, index: number) => {
     const res: { canvas: WidgetProps; canvasLayout: LayoutProps } =
       addSectionToMainCanvasLayout(
         mainCanvasWidget,
         mainCanvasLayout as LayoutProps,
-        highlight,
+        { ...highlight, rowIndex: highlight.rowIndex + index },
         section,
       );
+
     mainCanvasWidget = res.canvas;
     mainCanvasLayout = res.canvasLayout;
     canvasWidgets = {
@@ -74,6 +102,7 @@ export function* addWidgetsToMainCanvasLayout(
       draggedWidgets,
       highlight.canvasId,
     );
+
     mainCanvasWidget = {
       ...mainCanvasWidget,
       children: [...mainCanvasWidget.children, res.section.widgetId],
@@ -121,6 +150,7 @@ export function* addWidgetsToMainCanvasLayout(
 function splitWidgets(widgets: WidgetLayoutProps[]): WidgetLayoutProps[][] {
   const sections: WidgetLayoutProps[] = [];
   const nonSections: WidgetLayoutProps[] = [];
+
   widgets.forEach((widget: WidgetLayoutProps) => {
     if (widget.widgetType === anvilWidgets.SECTION_WIDGET) {
       sections.push(widget);
@@ -128,6 +158,7 @@ function splitWidgets(widgets: WidgetLayoutProps[]): WidgetLayoutProps[][] {
       nonSections.push(widget);
     }
   });
+
   return [sections, nonSections];
 }
 

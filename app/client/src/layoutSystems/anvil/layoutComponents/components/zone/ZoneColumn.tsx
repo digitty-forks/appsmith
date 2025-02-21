@@ -1,11 +1,15 @@
 import React, { useMemo } from "react";
 import { FlexLayout, type FlexLayoutProps } from "../FlexLayout";
-import { useZoneMinWidth } from "layoutSystems/anvil/canvasArenas/hooks/useZoneMinWidth";
+import { useZoneMinWidth } from "./useZoneMinWidth";
 
 export const ZoneColumn = (props: FlexLayoutProps) => {
   const minWidth: string = useZoneMinWidth();
 
   const flexProps = useMemo(() => ({ ...props, minWidth }), [props, minWidth]);
 
-  return <FlexLayout {...flexProps}>{props.children}</FlexLayout>;
+  return (
+    <FlexLayout isContainer {...flexProps}>
+      {props.children}
+    </FlexLayout>
+  );
 };

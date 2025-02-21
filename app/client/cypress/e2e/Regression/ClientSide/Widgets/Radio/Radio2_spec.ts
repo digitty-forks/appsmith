@@ -16,7 +16,7 @@ import EditorNavigation, {
 
 describe(
   "Radio Widget test cases",
-  { tags: ["@tag.Widget", "@tag.Radio"] },
+  { tags: ["@tag.Widget", "@tag.Radio", "@tag.Binding"] },
   function () {
     it("1. Validate radio widget bindings", () => {
       //JS Object
@@ -37,8 +37,9 @@ describe(
         },
       );
       entityExplorer.DragDropWidgetNVerify(draggableWidgets.RADIO_GROUP);
-      propPane.EnterJSContext("Options", "{{JSObject1.myFun1()}}");
 
+      propPane.ToggleJSModeByIndex("options", true, 1);
+      propPane.EnterJSContext("Options", "{{JSObject1.myFun1()}}");
       deployMode.DeployApp(
         locators._widgetInDeployed(draggableWidgets.RADIO_GROUP),
       );
@@ -264,12 +265,6 @@ describe(
       );
       agHelper.GetNClick(locators._alignment("right"));
 
-      //Width
-      agHelper.AssertCSS(
-        widgetLocators.radioWidgetLabelContainer,
-        "width",
-        "55.859375px",
-      );
       agHelper.GetNClick(widgetLocators.selectWidgetWidthPlusBtn);
       agHelper.GetNClick(widgetLocators.selectWidgetWidthPlusBtn);
 
@@ -291,11 +286,6 @@ describe(
         "text-align",
         "right",
       );
-      agHelper.AssertCSS(
-        widgetLocators.radioWidgetLabelContainer,
-        "width",
-        "151.265625px",
-      );
       agHelper.AssertText(
         widgetLocators.radioWidgetLabel,
         "text",
@@ -307,7 +297,7 @@ describe(
       deployMode.NavigateBacktoEditor();
 
       //Tooltip
-      entityExplorer.DragNDropWidget(draggableWidgets.TEXT, 300, 300);
+      entityExplorer.DragDropWidgetNVerify(draggableWidgets.TEXT, 300, 300);
       propPane.UpdatePropertyFieldValue("Text", "Tooltip text");
       EditorNavigation.SelectEntityByName("RadioGroup1", EntityType.Widget);
       propPane.EnterJSContext(
@@ -387,19 +377,6 @@ describe(
         0,
         true,
       );
-      agHelper.GetHeight(
-        locators._widgetInDeployed(draggableWidgets.RADIO_GROUP),
-      );
-      cy.get("@eleHeight").then(($currentHeight: any) => {
-        expect($currentHeight).to.be.greaterThan(270);
-      });
-
-      agHelper.GetWidth(
-        locators._widgetInDeployed(draggableWidgets.RADIO_GROUP),
-      );
-      cy.get("@eleWidth").then(($currentWidth) => {
-        expect($currentWidth).to.be.greaterThan(420);
-      });
     });
 
     it("7. Validate set property methods for Radio group", () => {

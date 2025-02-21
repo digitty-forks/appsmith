@@ -75,7 +75,7 @@ function testJsontextClear(endp) {
 
 describe(
   "List widget v2 - meta hydration tests",
-  { tags: ["@tag.Widget", "@tag.List"] },
+  { tags: ["@tag.Widget", "@tag.List", "@tag.Binding"] },
   () => {
     before(() => {
       _.agHelper.AddDsl("Listv2/MetaHydrationDSL");
@@ -104,7 +104,7 @@ describe(
 
       cy.testJsontext("items", "{{Api1.data}}");
 
-      cy.togglebar(commonlocators.serverSidePaginationCheckbox);
+      _.agHelper.CheckUncheck(commonlocators.serverSidePaginationCheckbox);
 
       cy.get(toggleJSButton("onpagechange")).click({ force: true });
       cy.testJsontext("onpagechange", "{{Api1.run()}}");

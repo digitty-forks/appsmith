@@ -1,14 +1,118 @@
-import type {
-  EvaluationReduxAction,
-  ReduxAction,
-} from "@appsmith/constants/ReduxActionConstants";
+import { toast } from "@appsmith/ads";
+import { objectKeys } from "@appsmith/utils";
+import { fetchDatasourceStructure } from "actions/datasourceActions";
+import {
+  setIdeEditorViewMode,
+  setShowQueryCreateNewModal,
+} from "actions/ideActions";
+import {
+  closeQueryActionTab,
+  closeQueryActionTabSuccess,
+  copyActionError,
+  copyActionSuccess,
+  createActionInit,
+  createActionSuccess,
+  createNewApiAction,
+  createNewQueryAction,
+  deleteActionSuccess,
+  fetchActionsForPage,
+  fetchActionsForPageSuccess,
+  type FetchActionsPayload,
+  moveActionError,
+  moveActionSuccess,
+  type SetActionPropertyPayload,
+  updateAction,
+  updateActionData,
+  updateActionProperty,
+  updateActionSuccess,
+} from "actions/pluginActionActions";
+import { setSnipingMode as setSnipingModeAction } from "actions/propertyPaneActions";
+import type { ActionCreateUpdateResponse } from "api/ActionAPI";
+import ActionAPI from "api/ActionAPI";
+import type { ApiResponse } from "api/ApiResponses";
+import type { FetchPageRequest, FetchPageResponse } from "api/PageApi";
+import PageApi from "api/PageApi";
+import { type Plugin, PluginPackageName, PluginType } from "entities/Plugin";
+import { EditorModes } from "components/editorComponents/CodeEditor/EditorConfig";
+import {
+  fixActionPayloadForMongoQuery,
+  getConfigInitialValues,
+} from "components/formControls/utils";
+import { INTEGRATION_TABS } from "constants/routes";
+import {
+  API_EDITOR_FORM_NAME,
+  QUERY_EDITOR_FORM_NAME,
+} from "ee/constants/forms";
+import {
+  ACTION_COPY_SUCCESS,
+  ACTION_MOVE_SUCCESS,
+  createMessage,
+  ERROR_ACTION_COPY_FAIL,
+  ERROR_ACTION_MOVE_FAIL,
+  ERROR_ACTION_RENAME_FAIL,
+} from "ee/constants/messages";
+import type { ReduxAction } from "actions/ReduxActionTypes";
 import {
   ReduxActionErrorTypes,
   ReduxActionTypes,
-} from "@appsmith/constants/ReduxActionConstants";
+} from "ee/constants/ReduxActionConstants";
+import { ENTITY_TYPE } from "ee/entities/AppsmithConsole/utils";
+import { CreateNewActionKey } from "ee/entities/Engine/actionHelpers";
+import { EditorViewMode } from "IDE/Interfaces/EditorTypes";
+import { getIDETypeByUrl } from "ee/entities/IDE/utils";
+import type { ActionData } from "ee/reducers/entityReducers/actionsReducer";
+import {
+  apiEditorIdURL,
+  builderURL,
+  integrationEditorURL,
+  queryEditorIdURL,
+  saasEditorApiIdURL,
+} from "ee/RouteBuilder";
+import { updateActionAPICall } from "ee/sagas/ApiCallerSagas";
+import {
+  generateDestinationIdInfoForQueryDuplication,
+  resolveParentEntityMetadata,
+} from "ee/sagas/helpers";
+import { updateCanvasWithDSL } from "ee/sagas/PageSagas";
+import {
+  getAction,
+  getCurrentPageNameByActionId,
+  getDatasource,
+  getDatasources,
+  getDatasourceStructureById,
+  getEditorConfig,
+  getNewEntityName,
+  getPageNameByPageId,
+  getPlugin,
+  getSettingConfig,
+} from "ee/selectors/entitiesSelector";
+import AnalyticsUtil from "ee/utils/AnalyticsUtil";
+import type {
+  Action,
+  ActionViewMode,
+  ApiAction,
+  ApiActionConfig,
+  BaseAction,
+  CreateActionDefaultsParams,
+  SlashCommandPayload,
+} from "entities/Action";
+import {
+  ActionCreationSourceTypeEnum,
+  isAPIAction,
+  isGraphqlPlugin,
+  SlashCommand,
+} from "entities/Action";
+import LOG_TYPE from "entities/AppsmithConsole/logtype";
+import type { Datasource, DatasourceStructure } from "entities/Datasource";
+import { get, isEmpty, merge } from "lodash";
+import { DEFAULT_API_ACTION_CONFIG } from "PluginActionEditor/constants/ApiEditorConstants";
+import { DEFAULT_GRAPHQL_ACTION_CONFIG } from "PluginActionEditor/constants/GraphQLEditorConstants";
+import { transformRestAction } from "PluginActionEditor/transformers/RestActionTransformer";
+import { getFormValues } from "redux-form";
 import {
   all,
   call,
+  delay,
   fork,
   put,
   race,
@@ -17,128 +121,34 @@ import {
   takeEvery,
   takeLatest,
 } from "redux-saga/effects";
-import type { Datasource, DatasourceStructure } from "entities/Datasource";
-import type { ActionCreateUpdateResponse } from "api/ActionAPI";
-import ActionAPI from "api/ActionAPI";
-import type { ApiResponse } from "api/ApiResponses";
-import type { FetchPageRequest, FetchPageResponse } from "api/PageApi";
-import PageApi from "api/PageApi";
-import { updateCanvasWithDSL } from "@appsmith/sagas/PageSagas";
-import type {
-  FetchActionsPayload,
-  SetActionPropertyPayload,
-} from "actions/pluginActionActions";
 import {
-  copyActionError,
-  copyActionSuccess,
-  createActionSuccess,
-  deleteActionSuccess,
-  fetchActionsForPage,
-  fetchActionsForPageSuccess,
-  moveActionError,
-  moveActionSuccess,
-  updateAction,
-  updateActionData,
-  updateActionProperty,
-  updateActionSuccess,
-} from "actions/pluginActionActions";
-import { getDynamicBindingsChangesSaga } from "utils/DynamicBindingUtils";
-import { validateResponse } from "./ErrorSagas";
-import { transformRestAction } from "transformers/RestActionTransformer";
-import { getCurrentPageId } from "selectors/editorSelectors";
-import AnalyticsUtil from "utils/AnalyticsUtil";
-import type {
-  Action,
-  ActionViewMode,
-  ApiAction,
-  ApiActionConfig,
-  CreateActionDefaultsParams,
-  SlashCommandPayload,
-} from "entities/Action";
-import { isGraphqlPlugin } from "entities/Action";
-import {
-  isAPIAction,
-  PluginPackageName,
-  PluginType,
-  SlashCommand,
-} from "entities/Action";
-import type { ActionData } from "@appsmith/reducers/entityReducers/actionsReducer";
-import type { PagePaneData } from "@appsmith/selectors/entitiesSelector";
-import {
-  getAction,
-  getCurrentPageNameByActionId,
-  getDatasource,
-  getDatasourceStructureById,
-  getDatasources,
-  getEditorConfig,
-  getPageNameByPageId,
-  getPlugin,
-  getSettingConfig,
-  selectQueriesForPagespane,
-  getPageActions,
-} from "@appsmith/selectors/entitiesSelector";
-import history from "utils/history";
-import { INTEGRATION_TABS } from "constants/routes";
-import PerformanceTracker, {
-  PerformanceTransactionName,
-} from "utils/PerformanceTracker";
-import {
-  ACTION_COPY_SUCCESS,
-  ACTION_MOVE_SUCCESS,
-  createMessage,
-  ERROR_ACTION_COPY_FAIL,
-  ERROR_ACTION_MOVE_FAIL,
-  ERROR_ACTION_RENAME_FAIL,
-} from "@appsmith/constants/messages";
-import { get, isEmpty, merge } from "lodash";
-import {
-  fixActionPayloadForMongoQuery,
-  getConfigInitialValues,
-} from "components/formControls/utils";
+  getCurrentBasePageId,
+  getCurrentPageId,
+} from "selectors/editorSelectors";
+import { convertToBaseParentEntityIdSelector } from "selectors/pageListSelectors";
 import AppsmithConsole from "utils/AppsmithConsole";
-import { ENTITY_TYPE } from "entities/AppsmithConsole";
-import LOG_TYPE from "entities/AppsmithConsole/logtype";
-import {
-  createNewApiAction,
-  createNewQueryAction,
-} from "actions/apiPaneActions";
-import type { Plugin } from "api/PluginApi";
-import * as log from "loglevel";
+import { getDynamicBindingsChangesSaga } from "utils/DynamicBindingUtils";
+import { getDefaultTemplateActionConfig } from "utils/editorContextUtils";
 import { shouldBeDefined } from "utils/helpers";
+import history from "utils/history";
+import { setAIPromptTriggered } from "utils/storage";
+import { sendAnalyticsEventSaga } from "./AnalyticsSaga";
+import { validateResponse } from "./ErrorSagas";
+import FocusRetention from "./FocusRetentionSaga";
 import {
-  apiEditorIdURL,
-  builderURL,
-  integrationEditorURL,
-  queryAddURL,
-  queryEditorIdURL,
-  saasEditorApiIdURL,
-} from "@appsmith/RouteBuilder";
-import {
-  RequestPayloadAnalyticsPath,
   checkAndLogErrorsIfCyclicDependency,
   enhanceRequestPayloadWithEventData,
+  getFromServerWhenNoPrefetchedResult,
+  RequestPayloadAnalyticsPath,
 } from "./helper";
-import { setSnipingMode as setSnipingModeAction } from "actions/propertyPaneActions";
-import { toast } from "design-system";
-import { getFormValues } from "redux-form";
-import {
-  API_EDITOR_FORM_NAME,
-  QUERY_EDITOR_FORM_NAME,
-} from "@appsmith/constants/forms";
-import { DEFAULT_GRAPHQL_ACTION_CONFIG } from "constants/ApiEditorConstants/GraphQLEditorConstants";
-import { DEFAULT_API_ACTION_CONFIG } from "constants/ApiEditorConstants/ApiEditorConstants";
-import { fetchDatasourceStructure } from "actions/datasourceActions";
-import { setAIPromptTriggered } from "utils/storage";
-import { getDefaultTemplateActionConfig } from "utils/editorContextUtils";
-import { sendAnalyticsEventSaga } from "./AnalyticsSaga";
-import { EditorModes } from "components/editorComponents/CodeEditor/EditorConfig";
-import { updateActionAPICall } from "@appsmith/sagas/ApiCallerSagas";
-import { getIsServerDSLMigrationsEnabled } from "selectors/pageSelectors";
-import { removeFocusHistoryRequest } from "../actions/focusHistoryActions";
-import { selectFeatureFlagCheck } from "@appsmith/selectors/featureFlagsSelectors";
-import { FEATURE_FLAG } from "@appsmith/entities/FeatureFlag";
-import { identifyEntityFromPath } from "../navigation/FocusEntity";
-import { getActionConfig } from "../pages/Editor/Explorer/Actions/helpers";
+import { handleQueryEntityRedirect } from "./IDESaga";
+import type { EvaluationReduxAction } from "actions/EvaluationReduxActionTypes";
+import { IDE_TYPE } from "ee/IDE/Interfaces/IDETypes";
+
+export const DEFAULT_PREFIX = {
+  QUERY: "Query",
+  API: "Api",
+} as const;
 
 export function* createDefaultActionPayloadWithPluginDefaults(
   props: CreateActionDefaultsParams,
@@ -153,6 +163,7 @@ export function* createDefaultActionPayloadWithPluginDefaults(
       getPluginActionDefaultValues,
       actionDefaults.pluginId,
     );
+
     return merge({}, pluginDefaults, actionDefaults);
   }
 
@@ -163,6 +174,7 @@ export function* createDefaultActionPayload({
   datasourceId,
   from,
   newActionName,
+  queryDefaultTableName,
 }: CreateActionDefaultsParams) {
   const datasource: Datasource = yield select(getDatasource, datasourceId);
   const plugin: Plugin = yield select(getPlugin, datasource?.pluginId);
@@ -189,11 +201,20 @@ export function* createDefaultActionPayload({
     datasource?.id,
   );
 
+  // TODO: Fix this the next time the file is edited
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const defaultActionConfig: any = getDefaultTemplateActionConfig(
     plugin,
+    queryDefaultTableName,
     dsStructure,
     datasource?.isMock,
   );
+
+  // since table name has been consumed, we no longer need it, hence resetting it
+  yield put({
+    type: ReduxActionTypes.SET_DATASOURCE_PREVIEW_SELECTED_TABLE_NAME,
+    payload: "",
+  });
 
   const defaultAction: Partial<Action> = {
     pluginId: datasource?.pluginId,
@@ -212,8 +233,8 @@ export function* createDefaultActionPayload({
       plugin?.type === PluginType.API
         ? defaultApiActionConfig
         : !!defaultActionConfig
-        ? defaultActionConfig
-        : {},
+          ? defaultActionConfig
+          : {},
     name: newActionName,
   };
 
@@ -224,35 +245,94 @@ export function* getPluginActionDefaultValues(pluginId: string) {
   if (!pluginId) {
     return;
   }
+
+  // TODO: Fix this the next time the file is edited
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const editorConfig: any[] = yield select(getEditorConfig, pluginId);
 
+  // TODO: Fix this the next time the file is edited
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const settingConfig: any[] = yield select(getSettingConfig, pluginId);
 
   let initialValues: Record<string, unknown> = yield call(
     getConfigInitialValues,
     editorConfig,
   );
+
   if (settingConfig) {
     const settingInitialValues: Record<string, unknown> = yield call(
       getConfigInitialValues,
       settingConfig,
     );
+
     initialValues = merge(initialValues, settingInitialValues);
   }
+
   return initialValues;
+}
+
+/**
+ * This saga prepares the action request i.e it helps generating a
+ * new name of an action. This is to reduce any dependency on name generation
+ * on the caller of this saga.
+ */
+export function* createActionRequestSaga(
+  actionPayload: ReduxAction<
+    Partial<Action> & { eventData?: unknown; pluginId: string }
+  >,
+) {
+  const payload = { ...actionPayload.payload };
+  const pluginId =
+    actionPayload.payload.pluginId ||
+    actionPayload.payload.datasource?.pluginId;
+
+  if (!actionPayload.payload.name) {
+    const { parentEntityId, parentEntityKey } = resolveParentEntityMetadata(
+      actionPayload.payload,
+    );
+
+    if (!parentEntityId || !parentEntityKey) return;
+
+    const plugin: Plugin | undefined = yield select(getPlugin, pluginId || "");
+    const isQueryType =
+      plugin?.type === PluginType.DB ||
+      plugin?.packageName === PluginPackageName.APPSMITH_AI;
+
+    const prefix = isQueryType ? DEFAULT_PREFIX.QUERY : DEFAULT_PREFIX.API;
+
+    if (
+      plugin?.type === PluginType.DB ||
+      plugin?.packageName === PluginPackageName.APPSMITH_AI
+    ) {
+      DEFAULT_PREFIX.QUERY;
+    }
+
+    payload.name = yield select(getNewEntityName, {
+      prefix,
+      parentEntityId,
+      parentEntityKey,
+    });
+  }
+
+  yield put(createActionInit(payload));
 }
 
 export function* createActionSaga(
   actionPayload: ReduxAction<
+    // TODO: Fix this the next time the file is edited
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Partial<Action> & { eventData: any; pluginId: string }
   >,
 ) {
   try {
+    // Indicates that source of action creation is self
+    actionPayload.payload.source = ActionCreationSourceTypeEnum.SELF;
     const payload = actionPayload.payload;
 
     const response: ApiResponse<ActionCreateUpdateResponse> =
       yield ActionAPI.createAction(payload);
     const isValidResponse: boolean = yield validateResponse(response);
+
     if (isValidResponse) {
       const pageName: string = yield select(
         getCurrentPageNameByActionId,
@@ -271,13 +351,15 @@ export function* createActionSaga(
         text: `Action created`,
         source: {
           type: ENTITY_TYPE.ACTION,
-          id: response.data.id,
+          // since resources are recognized by their baseId in console
+          id: response.data.baseId,
           // @ts-expect-error: name does not exists on type ActionCreateUpdateResponse
           name: response.data.name,
         },
       });
 
       const newAction = response.data;
+
       // @ts-expect-error: type mismatch ActionCreateUpdateResponse vs Action
       yield put(createActionSuccess(newAction));
 
@@ -298,9 +380,11 @@ export function* fetchActionDatasourceStructure(
   if (action.datasource?.id) {
     const doesDatasourceStructureAlreadyExist: DatasourceStructure =
       yield select(getDatasourceStructureById, action.datasource.id);
+
     if (doesDatasourceStructureAlreadyExist) {
       return;
     }
+
     yield put(fetchDatasourceStructure(action.datasource.id, true));
   } else {
     return;
@@ -310,50 +394,46 @@ export function* fetchActionDatasourceStructure(
 export function* fetchActionsSaga(
   action: EvaluationReduxAction<FetchActionsPayload>,
 ) {
-  const { applicationId } = action.payload;
-  PerformanceTracker.startAsyncTracking(
-    PerformanceTransactionName.FETCH_ACTIONS_API,
-    { mode: "EDITOR", appId: applicationId },
-  );
+  const { applicationId, unpublishedActions } = action.payload;
+
   try {
-    const response: ApiResponse<Action[]> = yield ActionAPI.fetchActions({
-      applicationId,
-    });
+    const response: ApiResponse<Action[]> = yield call(
+      getFromServerWhenNoPrefetchedResult,
+      unpublishedActions,
+      async () => ActionAPI.fetchActions({ applicationId }),
+    );
+
     const isValidResponse: boolean = yield validateResponse(response);
+
     if (isValidResponse) {
       yield put({
         type: ReduxActionTypes.FETCH_ACTIONS_SUCCESS,
         payload: response.data,
         postEvalActions: action.postEvalActions,
       });
-      PerformanceTracker.stopAsyncTracking(
-        PerformanceTransactionName.FETCH_ACTIONS_API,
-      );
     }
   } catch (error) {
     yield put({
       type: ReduxActionErrorTypes.FETCH_ACTIONS_ERROR,
       payload: { error },
     });
-    PerformanceTracker.stopAsyncTracking(
-      PerformanceTransactionName.FETCH_ACTIONS_API,
-      { failed: true },
-    );
   }
 }
 
 export function* fetchActionsForViewModeSaga(
   action: ReduxAction<FetchActionsPayload>,
 ) {
-  const { applicationId } = action.payload;
-  PerformanceTracker.startAsyncTracking(
-    PerformanceTransactionName.FETCH_ACTIONS_API,
-    { mode: "VIEWER", appId: applicationId },
-  );
+  const { applicationId, publishedActions } = action.payload;
+
   try {
-    const response: ApiResponse<ActionViewMode[]> =
-      yield ActionAPI.fetchActionsForViewMode(applicationId);
+    const response: ApiResponse<ActionViewMode[]> = yield call(
+      getFromServerWhenNoPrefetchedResult,
+      publishedActions,
+      async () => ActionAPI.fetchActionsForViewMode(applicationId),
+    );
+
     const isValidResponse: boolean = yield validateResponse(response);
+
     if (isValidResponse) {
       const correctFormatResponse = response.data.map((action) => {
         return {
@@ -363,6 +443,7 @@ export function* fetchActionsForViewModeSaga(
           },
         };
       });
+
       yield put({
         type: ReduxActionTypes.FETCH_ACTIONS_VIEW_MODE_SUCCESS,
         payload: correctFormatResponse,
@@ -373,18 +454,11 @@ export function* fetchActionsForViewModeSaga(
         payload: response.responseMeta.error,
       });
     }
-    PerformanceTracker.stopAsyncTracking(
-      PerformanceTransactionName.FETCH_ACTIONS_API,
-    );
   } catch (error) {
     yield put({
       type: ReduxActionErrorTypes.FETCH_ACTIONS_VIEW_MODE_ERROR,
       payload: { error },
     });
-    PerformanceTracker.stopAsyncTracking(
-      PerformanceTransactionName.FETCH_ACTIONS_API,
-      { failed: true },
-    );
   }
 }
 
@@ -392,28 +466,18 @@ export function* fetchActionsForPageSaga(
   action: EvaluationReduxAction<{ pageId: string }>,
 ) {
   const { pageId } = action.payload;
-  PerformanceTracker.startAsyncTracking(
-    PerformanceTransactionName.FETCH_PAGE_ACTIONS_API,
-    { pageId: pageId },
-  );
+
   try {
     const response: ApiResponse<Action[]> = yield call(
       ActionAPI.fetchActionsByPageId,
       pageId,
     );
     const isValidResponse: boolean = yield validateResponse(response);
+
     if (isValidResponse) {
       yield put(fetchActionsForPageSuccess(response.data));
-      // wait for success of
-      PerformanceTracker.stopAsyncTracking(
-        PerformanceTransactionName.FETCH_PAGE_ACTIONS_API,
-      );
     }
   } catch (error) {
-    PerformanceTracker.stopAsyncTracking(
-      PerformanceTransactionName.FETCH_PAGE_ACTIONS_API,
-      { failed: true },
-    );
     yield put({
       type: ReduxActionErrorTypes.FETCH_ACTIONS_FOR_PAGE_ERROR,
       payload: { error },
@@ -423,12 +487,8 @@ export function* fetchActionsForPageSaga(
 
 export function* updateActionSaga(actionPayload: ReduxAction<{ id: string }>) {
   try {
-    PerformanceTracker.startAsyncTracking(
-      PerformanceTransactionName.UPDATE_ACTION_API,
-      { actionid: actionPayload.payload.id },
-    );
-
     let action: Action = yield select(getAction, actionPayload.payload.id);
+
     if (!action) throw new Error("Could not find action to update");
 
     if (isAPIAction(action)) {
@@ -459,16 +519,19 @@ export function* updateActionSaga(actionPayload: ReduxAction<{ id: string }>) {
 
     /* NOTE: This  is fix for a missing command config */
     const plugin: Plugin | undefined = yield select(getPlugin, action.pluginId);
+
     if (action && plugin && plugin.packageName === PluginPackageName.MONGO) {
       // @ts-expect-error: Types are not available
       action = fixActionPayloadForMongoQuery(action);
     }
+
     const response: ApiResponse<Action> = yield call(
       updateActionAPICall,
       action,
     );
 
     const isValidResponse: boolean = yield validateResponse(response);
+
     if (isValidResponse) {
       const pageName: string = yield select(
         getCurrentPageNameByActionId,
@@ -480,20 +543,12 @@ export function* updateActionSaga(actionPayload: ReduxAction<{ id: string }>) {
         pageName,
       });
 
-      PerformanceTracker.stopAsyncTracking(
-        PerformanceTransactionName.UPDATE_ACTION_API,
-      );
-
       yield put(updateActionSuccess({ data: response.data }));
       checkAndLogErrorsIfCyclicDependency(
         (response.data as Action).errorReports,
       );
     }
   } catch (error) {
-    PerformanceTracker.stopAsyncTracking(
-      PerformanceTransactionName.UPDATE_ACTION_API,
-      { failed: true },
-    );
     yield put({
       type: ReduxActionErrorTypes.UPDATE_ACTION_ERROR,
       payload: { error, id: actionPayload.payload.id, show: false },
@@ -501,67 +556,17 @@ export function* updateActionSaga(actionPayload: ReduxAction<{ id: string }>) {
   }
 }
 
-/**
- * Adds custom redirect logic to redirect after an item is deleted
- * 1. Do not navigate if the deleted item is not selected
- * 2. If it is the only item, navigate to a list url
- * 3. If there are other items, navigate to an item close to the current one
- * **/
-function* handleDeleteActionRedirect(deletedAction: Action) {
-  const pageId: string = yield select(getCurrentPageId);
-  const allActions: ActionData[] = yield select(getPageActions(pageId));
-  const currentSelectedEntity = identifyEntityFromPath(
-    window.location.pathname,
-  );
-  const isSelectedActionDeleted = currentSelectedEntity.id === deletedAction.id;
+export function* apiCallToSaveAction(action: Action) {
+  const response: ApiResponse<Action> = yield call(updateActionAPICall, action);
 
-  // If deleted item is not currently selected, don't redirect
-  if (!isSelectedActionDeleted) {
-    return;
+  const isValidResponse: boolean = yield validateResponse(response);
+
+  if (isValidResponse) {
+    yield put(updateActionSuccess({ data: response.data }));
+    checkAndLogErrorsIfCyclicDependency((response.data as Action).errorReports);
   }
 
-  const otherActions = allActions.filter(
-    (a) => deletedAction.id !== a.config.id,
-  );
-  // If no other action is remaining, navigate to the query add url
-  if (otherActions.length === 0) {
-    history.push(queryAddURL({ pageId }));
-    return;
-  }
-
-  // Check if another action is present in the group and redirect to it, orelse
-  // navigate to tht top of the list
-  const currentSortedList: PagePaneData = yield select(
-    selectQueriesForPagespane,
-  );
-  let deletedActionGroup;
-  for (const [group, actions] of Object.entries(currentSortedList)) {
-    if (actions.find((a) => a.id === deletedAction.id)) {
-      deletedActionGroup = group;
-      break;
-    }
-  }
-  const groupActions = currentSortedList[deletedActionGroup || ""];
-  const remainingGroupActions = groupActions.filter(
-    (a) => a.id !== deletedAction.id,
-  );
-  let url;
-  if (remainingGroupActions.length === 0) {
-    const toRedirect = otherActions[0];
-    const config = getActionConfig(toRedirect.config.pluginType);
-    url = config?.getURL(
-      pageId,
-      toRedirect.config.id,
-      toRedirect.config.pluginType,
-    );
-  } else {
-    const toRedirect = remainingGroupActions[0];
-    const config = getActionConfig(toRedirect.type);
-    url = config?.getURL(pageId, toRedirect.id, toRedirect.type);
-  }
-  if (url) {
-    history.push(url);
-  }
+  return { isValidResponse, response };
 }
 
 export function* deleteActionSaga(
@@ -574,56 +579,61 @@ export function* deleteActionSaga(
   try {
     const id = actionPayload.payload.id;
     const name = actionPayload.payload.name;
+    const currentUrl = window.location.pathname;
     const action: Action | undefined = yield select(getAction, id);
+    const ideType = getIDETypeByUrl(currentUrl);
 
     if (!action) return;
 
     const isApi = action.pluginType === PluginType.API;
     const isQuery = action.pluginType === PluginType.DB;
     const isSaas = action.pluginType === PluginType.SAAS;
-    const pageId: string = yield select(getCurrentPageId);
+    const basePageId: string = yield select(getCurrentBasePageId);
 
     const response: ApiResponse<Action> = yield ActionAPI.deleteAction(id);
     const isValidResponse: boolean = yield validateResponse(response);
+
     if (!isValidResponse) {
       return;
     }
+
     if (isApi) {
       const pageName: string = yield select(getCurrentPageNameByActionId, id);
+
       AnalyticsUtil.logEvent("DELETE_API", {
         apiName: name,
         pageName,
         apiID: id,
       });
     }
+
     if (isSaas) {
       const pageName: string = yield select(getCurrentPageNameByActionId, id);
+
       AnalyticsUtil.logEvent("DELETE_SAAS", {
         apiName: name,
         pageName,
         apiID: id,
       });
     }
+
     if (isQuery) {
       AnalyticsUtil.logEvent("DELETE_QUERY", {
         queryName: name,
       });
     }
-    const currentUrl = window.location.pathname;
-    const isPagePaneSegmentsEnabled: boolean = yield select(
-      selectFeatureFlagCheck,
-      FEATURE_FLAG.release_show_new_sidebar_pages_pane_enabled,
-    );
 
-    if (isPagePaneSegmentsEnabled) {
-      yield call(handleDeleteActionRedirect, action);
+    yield call(FocusRetention.handleRemoveFocusHistory, currentUrl);
+
+    if (ideType === IDE_TYPE.App) {
+      yield call(handleQueryEntityRedirect, action.id);
     } else {
       if (!!actionPayload.payload.onSuccess) {
         actionPayload.payload.onSuccess();
       } else {
         history.push(
           integrationEditorURL({
-            pageId,
+            basePageId,
             selectedTab: INTEGRATION_TABS.NEW,
           }),
         );
@@ -644,7 +654,7 @@ export function* deleteActionSaga(
     });
 
     yield put(deleteActionSuccess({ id }));
-    yield put(removeFocusHistoryRequest(currentUrl));
+    yield put(closeQueryActionTabSuccess({ id, parentId: basePageId }));
   } catch (error) {
     yield put({
       type: ReduxActionErrorTypes.DELETE_ACTION_ERROR,
@@ -665,12 +675,19 @@ function* moveActionSaga(
     yield select(getAction, action.payload.id),
     `Action not found for id - ${action.payload.id}`,
   );
+  const newName: string = yield select(getNewEntityName, {
+    prefix: action.payload.name,
+    parentEntityId: action.payload.destinationPageId,
+    parentEntityKey: CreateNewActionKey.PAGE,
+    startWithoutIndex: true,
+  });
+
   try {
     const response: ApiResponse = yield ActionAPI.moveAction({
       action: {
         ...actionObject,
         pageId: action.payload.originalPageId,
-        name: action.payload.name,
+        name: newName,
       },
       destinationPageId: action.payload.destinationPageId,
     });
@@ -681,6 +698,7 @@ function* moveActionSaga(
       // @ts-expect-error: response is of type unknown
       response.data.pageId,
     );
+
     if (isValidResponse) {
       toast.show(
         // @ts-expect-error: response is of type unknown
@@ -698,29 +716,62 @@ function* moveActionSaga(
       // @ts-expect-error: response is of type unknown
       apiID: response.data.id,
     });
-    const currentUrl = window.location.pathname;
+    yield call(
+      closeActionTabSaga,
+      closeQueryActionTab({
+        id: action.payload.id,
+        parentId: action.payload.originalPageId,
+      }),
+    );
     // @ts-expect-error: response is of type unknown
     yield put(moveActionSuccess(response.data));
-    yield put(removeFocusHistoryRequest(currentUrl));
   } catch (e) {
-    toast.show(createMessage(ERROR_ACTION_MOVE_FAIL, actionObject.name), {
-      kind: "error",
-    });
     yield put(
       moveActionError({
         id: action.payload.id,
         originalPageId: action.payload.originalPageId,
+        show: true,
+        error: {
+          message: createMessage(ERROR_ACTION_MOVE_FAIL, actionObject.name),
+        },
       }),
     );
   }
 }
 
 function* copyActionSaga(
-  action: ReduxAction<{ id: string; destinationPageId: string; name: string }>,
+  action: ReduxAction<{
+    id: string;
+    destinationEntityId: string;
+    name: string;
+  }>,
 ) {
-  let actionObject: Action = yield select(getAction, action.payload.id);
+  const { destinationEntityId, id, name } = action.payload;
+  let actionObject: Action = yield select(getAction, id);
+
+  const { parentEntityId, parentEntityKey } =
+    resolveParentEntityMetadata(actionObject);
+
+  if (!parentEntityId || !parentEntityKey) return;
+
+  const newName: string = yield select(getNewEntityName, {
+    prefix: name,
+    parentEntityId: destinationEntityId,
+    parentEntityKey,
+    suffix: "Copy",
+    startWithoutIndex: true,
+  });
+
+  const destinationEntityIdInfo = generateDestinationIdInfoForQueryDuplication(
+    destinationEntityId,
+    parentEntityKey,
+  );
+
+  if (objectKeys(destinationEntityIdInfo).length === 0) return;
+
   try {
     if (!actionObject) throw new Error("Could not find action to copy");
+
     // At this point the actionObject.id will be the id of the action to be copied
     // We enhance the payload with eventData to track the action being copied
     actionObject = enhanceRequestPayloadWithEventData(
@@ -729,21 +780,30 @@ function* copyActionSaga(
     ) as Action;
 
     const copyAction = Object.assign({}, actionObject, {
-      name: action.payload.name,
-      pageId: action.payload.destinationPageId,
+      name: newName,
+      ...destinationEntityIdInfo,
     }) as Partial<Action>;
 
+    // Indicates that source of action creation is copy action
+    copyAction.source = ActionCreationSourceTypeEnum.COPY_ACTION;
+
     delete copyAction.id;
+    delete copyAction.baseId;
     const response: ApiResponse<ActionCreateUpdateResponse> =
       yield ActionAPI.createAction(copyAction);
     const datasources: Datasource[] = yield select(getDatasources);
 
     const isValidResponse: boolean = yield validateResponse(response);
-    const pageName: string = yield select(
-      getPageNameByPageId,
-      // @ts-expect-error: pageId not present on ActionCreateUpdateResponse
-      response.data.pageId,
-    );
+    let pageName: string = "";
+
+    if (parentEntityKey === CreateNewActionKey.PAGE) {
+      pageName = yield select(
+        getPageNameByPageId,
+        // @ts-expect-error: pageId not present on ActionCreateUpdateResponse
+        response.data.pageId,
+      );
+    }
+
     if (isValidResponse) {
       toast.show(
         createMessage(ACTION_COPY_SUCCESS, actionObject.name, pageName),
@@ -758,11 +818,14 @@ function* copyActionSaga(
       const originalActionId = get(
         actionObject,
         `${RequestPayloadAnalyticsPath}.originalActionId`,
-        action.payload.id,
+        id,
       );
+
       AnalyticsUtil.logEvent("DUPLICATE_ACTION", {
         // @ts-expect-error: name not present on ActionCreateUpdateResponse
         actionName: response.data.name,
+        parentEntityId,
+        parentEntityKey,
         pageName: pageName,
         actionId: response.data.id,
         originalActionId,
@@ -783,12 +846,23 @@ function* copyActionSaga(
 
     // @ts-expect-error: type mismatch Action vs ActionCreateUpdateResponse
     yield put(copyActionSuccess(payload));
-  } catch (e) {
+  } catch (e: unknown) {
     const actionName = actionObject ? actionObject.name : "";
-    toast.show(createMessage(ERROR_ACTION_COPY_FAIL, actionName), {
-      kind: "error",
-    });
-    yield put(copyActionError(action.payload));
+    const errorMessage =
+      e instanceof Error
+        ? e.message
+        : createMessage(ERROR_ACTION_COPY_FAIL, actionName);
+
+    yield put(
+      copyActionError({
+        id,
+        destinationEntityIdInfo,
+        show: true,
+        error: {
+          message: errorMessage,
+        },
+      }),
+    );
   }
 }
 
@@ -798,20 +872,11 @@ export function* refactorActionName(
   oldName: string,
   newName: string,
 ) {
-  // fetch page of the action
-  PerformanceTracker.startAsyncTracking(
-    PerformanceTransactionName.REFACTOR_ACTION_NAME,
-    { actionId: id },
-  );
-
-  const isServerDSLMigrationsEnabled = select(getIsServerDSLMigrationsEnabled);
-  const params: FetchPageRequest = { id: pageId };
-  if (isServerDSLMigrationsEnabled) {
-    params.migrateDSL = true;
-  }
+  const params: FetchPageRequest = { pageId, migrateDSL: true };
   const pageResponse: FetchPageResponse = yield call(PageApi.fetchPage, params);
   // check if page request is successful
   const isPageRequestSuccessful: boolean = yield validateResponse(pageResponse);
+
   if (isPageRequestSuccessful) {
     // get the layoutId from the page response
     const layoutId = pageResponse.data.layouts[0].id;
@@ -829,10 +894,6 @@ export function* refactorActionName(
 
     const currentPageId: string = yield select(getCurrentPageId);
 
-    PerformanceTracker.stopAsyncTracking(
-      PerformanceTransactionName.REFACTOR_ACTION_NAME,
-      { isSuccess: isRefactorSuccessful },
-    );
     if (isRefactorSuccessful) {
       yield put({
         type: ReduxActionTypes.SAVE_ACTION_NAME_SUCCESS,
@@ -840,6 +901,7 @@ export function* refactorActionName(
           actionId: id,
         },
       });
+
       if (currentPageId === pageId) {
         // @ts-expect-error: refactorResponse is of type unknown
         yield updateCanvasWithDSL(refactorResponse.data, pageId, layoutId);
@@ -864,14 +926,15 @@ function* bindDataOnCanvasSaga(
   action: ReduxAction<{
     queryId: string;
     applicationId: string;
-    pageId: string;
+    basePageId: string;
   }>,
 ) {
-  const { pageId, queryId } = action.payload;
+  const { basePageId, queryId } = action.payload;
+
   yield put(setSnipingModeAction({ isActive: true, bindTo: queryId }));
   history.push(
     builderURL({
-      pageId,
+      basePageId,
     }),
   );
 }
@@ -901,12 +964,9 @@ function* saveActionName(action: ReduxAction<{ id: string; name: string }>) {
       payload: {
         actionId: action.payload.id,
         oldName: api.config.name,
+        message: createMessage(ERROR_ACTION_RENAME_FAIL, action.payload.name),
       },
     });
-    toast.show(createMessage(ERROR_ACTION_RENAME_FAIL, action.payload.name), {
-      kind: "error",
-    });
-    log.error(e);
   }
 }
 
@@ -914,14 +974,12 @@ export function* setActionPropertySaga(
   action: EvaluationReduxAction<SetActionPropertyPayload>,
 ) {
   const { actionId, propertyName, skipSave, value } = action.payload;
+
   if (!actionId) return;
+
   if (propertyName === "name") return;
 
   const actionObj: Action = yield select(getAction, actionId);
-  const fieldToBeUpdated = propertyName.replace(
-    "actionConfiguration",
-    "config",
-  );
 
   if (!actionObj) {
     return;
@@ -936,21 +994,10 @@ export function* setActionPropertySaga(
     ),
   );
 
-  AppsmithConsole.info({
-    logType: LOG_TYPE.ACTION_UPDATE,
-    text: "Configuration updated",
-    source: {
-      type: ENTITY_TYPE.ACTION,
-      name: actionObj?.name,
-      id: actionId,
-      propertyPath: fieldToBeUpdated,
-    },
-    state: {
-      [fieldToBeUpdated]: value,
-    },
-  });
-
+  // TODO: Fix this the next time the file is edited
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const effects: Record<string, any> = {};
+
   // Value change effect
   effects[propertyName] = value;
   // Bindings change effect
@@ -970,6 +1017,7 @@ export function* setActionPropertySaga(
       ),
     ),
   );
+
   if (propertyName === "executeOnLoad") {
     yield put({
       type: ReduxActionTypes.TOGGLE_ACTION_EXECUTE_ON_LOAD_INIT,
@@ -978,8 +1026,10 @@ export function* setActionPropertySaga(
         shouldExecute: value,
       },
     });
+
     return;
   }
+
   //skipSave property is added to skip API calls when the updateAction needs to be called from the caller
   if (!skipSave) yield put(updateAction({ id: actionId }));
 }
@@ -994,6 +1044,7 @@ function* toggleActionExecuteOnLoadSaga(
       action.payload.shouldExecute,
     );
     const isValidResponse: boolean = yield validateResponse(response);
+
     if (isValidResponse) {
       yield put({
         type: ReduxActionTypes.TOGGLE_ACTION_EXECUTE_ON_LOAD_SUCCESS,
@@ -1007,68 +1058,85 @@ function* toggleActionExecuteOnLoadSaga(
   }
 }
 
-function* handleMoveOrCopySaga(actionPayload: ReduxAction<{ id: string }>) {
-  const { id } = actionPayload.payload;
-  const action: Action = yield select(getAction, id);
-  const isApi = action.pluginType === PluginType.API;
-  const isQuery = action.pluginType === PluginType.DB;
-  const isSaas = action.pluginType === PluginType.SAAS;
+function* handleMoveOrCopySaga(actionPayload: ReduxAction<Action>) {
+  const { baseId: baseActionId, pluginId, pluginType } = actionPayload.payload;
+  const { parentEntityId } = resolveParentEntityMetadata(actionPayload.payload);
 
-  if (isApi) {
-    history.push(
-      apiEditorIdURL({
-        pageId: action.pageId,
-        apiId: action.id,
-      }),
-    );
-  }
-  if (isQuery) {
-    history.push(
-      queryEditorIdURL({
-        pageId: action.pageId,
-        queryId: action.id,
-      }),
-    );
-  }
-  if (isSaas) {
-    const plugin = shouldBeDefined<Plugin>(
-      yield select(getPlugin, action.pluginId),
-      `Plugin not found for pluginId - ${action.pluginId}`,
-    );
-    history.push(
-      saasEditorApiIdURL({
-        pageId: action.pageId,
-        pluginPackageName: plugin.packageName,
-        apiId: action.id,
-      }),
-    );
+  if (!parentEntityId) return;
+
+  const baseParentEntityId: string = yield select(
+    convertToBaseParentEntityIdSelector,
+    parentEntityId,
+  );
+
+  switch (pluginType) {
+    case PluginType.API: {
+      history.push(
+        apiEditorIdURL({
+          baseParentEntityId,
+          baseApiId: baseActionId,
+        }),
+      );
+      break;
+    }
+    case PluginType.SAAS: {
+      const plugin = shouldBeDefined<Plugin>(
+        yield select(getPlugin, pluginId),
+        `Plugin not found for pluginId - ${pluginId}`,
+      );
+
+      history.push(
+        saasEditorApiIdURL({
+          baseParentEntityId,
+          pluginPackageName: plugin.packageName,
+          baseApiId: baseActionId,
+        }),
+      );
+      break;
+    }
+    default: {
+      history.push(
+        queryEditorIdURL({
+          baseParentEntityId,
+          baseQueryId: baseActionId,
+        }),
+      );
+      break;
+    }
   }
 }
 
 function* executeCommandSaga(actionPayload: ReduxAction<SlashCommandPayload>) {
   const pageId: string = yield select(getCurrentPageId);
+  const basePageId: string = yield select(getCurrentBasePageId);
   const callback = get(actionPayload, "payload.callback");
+
   switch (actionPayload.payload.actionType) {
     case SlashCommand.NEW_INTEGRATION:
       history.push(
         integrationEditorURL({
-          pageId,
+          basePageId,
           selectedTab: INTEGRATION_TABS.NEW,
         }),
       );
       break;
     case SlashCommand.NEW_QUERY:
       const datasource = get(actionPayload, "payload.args.datasource");
+
       yield put(createNewQueryAction(pageId, "QUICK_COMMANDS", datasource.id));
       // @ts-expect-error: QUERY is of type unknown
       const QUERY = yield take(ReduxActionTypes.CREATE_ACTION_SUCCESS);
+
       if (callback) callback(`{{${QUERY.payload.name}.data}}`);
+
       break;
     case SlashCommand.NEW_API:
       yield put(createNewApiAction(pageId, "QUICK_COMMANDS"));
       // @ts-expect-error: QUERY is of type unknown
       const API = yield take(ReduxActionTypes.CREATE_ACTION_SUCCESS);
+
       if (callback) callback(`{{${API.payload.name}.data}}`);
+
       break;
     case SlashCommand.ASK_AI: {
       const context = get(actionPayload, "payload.args", {});
@@ -1088,6 +1156,7 @@ function* executeCommandSaga(actionPayload: ReduxAction<SlashCommandPayload>) {
 
       if (triggerCount < 5) {
         const currentValue: number = yield setAIPromptTriggered(context.mode);
+
         yield put({
           type: ReduxActionTypes.UPDATE_AI_TRIGGERED,
           payload: {
@@ -1112,12 +1181,33 @@ function* updateEntitySavingStatus() {
   yield race([
     take(ReduxActionTypes.UPDATE_ACTION_SUCCESS),
     take(ReduxActionTypes.SAVE_PAGE_SUCCESS),
-    take(ReduxActionTypes.UPDATE_JS_ACTION_BODY_SUCCESS),
+    take(ReduxActionTypes.EXECUTE_JS_UPDATES),
   ]);
 
   yield put({
     type: ReduxActionTypes.ENTITY_UPDATE_SUCCESS,
   });
+}
+
+function* handleCreateNewQueryFromActionCreator(
+  action: ReduxAction<(name: string) => void>,
+) {
+  // Show the Query create modal from where the user selects the type of query to be created
+  yield put(setShowQueryCreateNewModal(true));
+
+  // Side by Side ramp. Switch to SplitScreen mode to allow user to edit query
+  yield put(setIdeEditorViewMode(EditorViewMode.SplitScreen));
+
+  // Wait for a query to be created
+  const createdQuery: ReduxAction<BaseAction> = yield take(
+    ReduxActionTypes.CREATE_ACTION_SUCCESS,
+  );
+
+  // A delay is needed to ensure the callback function has reference to the latest created Query
+  yield delay(100);
+
+  // Call the payload callback with the new query name that will set the binding to the field
+  action.payload(createdQuery.payload.name);
 }
 
 export function* watchActionSagas() {
@@ -1128,9 +1218,11 @@ export function* watchActionSagas() {
       ReduxActionTypes.FETCH_ACTIONS_VIEW_MODE_INIT,
       fetchActionsForViewModeSaga,
     ),
+    takeEvery(ReduxActionTypes.CREATE_ACTION_REQUEST, createActionRequestSaga),
     takeEvery(ReduxActionTypes.CREATE_ACTION_INIT, createActionSaga),
     takeLatest(ReduxActionTypes.UPDATE_ACTION_INIT, updateActionSaga),
     takeLatest(ReduxActionTypes.DELETE_ACTION_INIT, deleteActionSaga),
+    takeLatest(ReduxActionTypes.CLOSE_QUERY_ACTION_TAB, closeActionTabSaga),
     takeLatest(ReduxActionTypes.BIND_DATA_ON_CANVAS, bindDataOnCanvasSaga),
     takeLatest(ReduxActionTypes.SAVE_ACTION_NAME_INIT, saveActionName),
     takeLatest(ReduxActionTypes.MOVE_ACTION_INIT, moveActionSaga),
@@ -1152,5 +1244,23 @@ export function* watchActionSagas() {
       ReduxActionTypes.ENTITY_UPDATE_STARTED,
       updateEntitySavingStatus,
     ),
+    takeLatest(
+      ReduxActionTypes.CREATE_NEW_QUERY_FROM_ACTION_CREATOR,
+      handleCreateNewQueryFromActionCreator,
+    ),
   ]);
+}
+
+export function* closeActionTabSaga(
+  actionPayload: ReduxAction<{
+    id: string;
+    parentId: string;
+  }>,
+) {
+  const { id, parentId } = actionPayload.payload;
+  const currentUrl = window.location.pathname;
+
+  yield call(FocusRetention.handleRemoveFocusHistory, currentUrl);
+  yield call(handleQueryEntityRedirect, id);
+  yield put(closeQueryActionTabSuccess({ id, parentId }));
 }

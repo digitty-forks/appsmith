@@ -9,30 +9,30 @@ import { FlexLayerAlignment } from "layoutSystems/common/utils/constants";
 import type BaseLayoutComponent from "layoutSystems/anvil/layoutComponents/BaseLayoutComponent";
 import LayoutFactory from "layoutSystems/anvil/layoutComponents/LayoutFactory";
 import { createZoneAndAddWidgets } from "./zoneUtils";
-import type { CanvasWidgetsReduxState } from "reducers/entityReducers/canvasWidgetsReducer";
+import type { CanvasWidgetsReduxState } from "ee/reducers/entityReducers/canvasWidgetsReducer";
 import { call } from "redux-saga/effects";
 import { severTiesFromParents, transformMovedWidgets } from "./moveUtils";
 import type { FlattenedWidgetProps } from "WidgetProvider/constants";
-import {
-  addNewWidgetToDsl,
-  getCreateWidgetPayload,
-} from "../../widgetAdditionUtils";
-import { anvilWidgets } from "widgets/anvil/constants";
+import { anvilWidgets } from "modules/ui-builder/ui/wds/constants";
+import { addNewAnvilWidgetToDSL } from "layoutSystems/anvil/integrations/sagas/anvilWidgetAdditionSagas/helpers";
 
 export function* createSectionAndAddWidget(
   allWidgets: CanvasWidgetsReduxState,
   highlight: AnvilHighlightInfo,
-  widgets: WidgetLayoutProps[],
+  draggedWidgets: WidgetLayoutProps[],
   parentId: string,
 ) {
   /**
    * Step 1: Create Section widget.
    */
   const widgetId: string = generateReactKey();
-  const updatedWidgets: CanvasWidgetsReduxState = yield call(
-    addNewWidgetToDsl,
+  const updatedWidgets: CanvasWidgetsReduxState = yield addNewAnvilWidgetToDSL(
     allWidgets,
-    getCreateWidgetPayload(widgetId, anvilWidgets.SECTION_WIDGET, parentId),
+    {
+      widgetId,
+      type: anvilWidgets.SECTION_WIDGET,
+      parentId,
+    },
   );
 
   /**
@@ -48,7 +48,7 @@ export function* createSectionAndAddWidget(
     yield call(
       addWidgetsToSection,
       updatedWidgets,
-      widgets,
+      draggedWidgets,
       highlight,
       sectionProps,
     );
@@ -61,9 +61,12 @@ export function* createSectionAndAddWidget(
  * @param widgets | WidgetLayoutProps[] : List of dragged widgets.
  * @returns WidgetLayoutProps[][] : List of dragged widgets split by type.
  */
-function splitWidgets(widgets: WidgetLayoutProps[]): WidgetLayoutProps[][] {
+export function splitWidgets(
+  widgets: WidgetLayoutProps[],
+): WidgetLayoutProps[][] {
   const zones: WidgetLayoutProps[] = [];
   const nonZones: WidgetLayoutProps[] = [];
+
   widgets.forEach((widget: WidgetLayoutProps) => {
     if (widget.widgetType === anvilWidgets.ZONE_WIDGET) {
       zones.push(widget);
@@ -71,6 +74,7 @@ function splitWidgets(widgets: WidgetLayoutProps[]): WidgetLayoutProps[][] {
       nonZones.push(widget);
     }
   });
+
   return [zones, nonZones];
 }
 
@@ -85,21 +89,18 @@ function* addZoneToSection(
   const { widgetId: zoneWidgetId } = zone;
   const { widgetId: sectionWidgetId } = canvasProps;
   let canvasWidgets: CanvasWidgetsReduxState = { ...allWidgets };
+
   if (!canvasWidgets[zoneWidgetId]) {
     /**
      * Zone does not exist.
      * => New widget.
      * => Create it and add to section.
      */
-    canvasWidgets = yield call(
-      addNewWidgetToDsl,
-      canvasWidgets,
-      getCreateWidgetPayload(
-        zoneWidgetId,
-        anvilWidgets.ZONE_WIDGET,
-        sectionWidgetId,
-      ),
-    );
+    canvasWidgets = yield addNewAnvilWidgetToDSL(canvasWidgets, {
+      widgetId: zoneWidgetId,
+      type: anvilWidgets.ZONE_WIDGET,
+      parentId: sectionWidgetId,
+    });
   } else {
     /**
      * Add zone widgetIds to canvas.children.
@@ -156,6 +157,7 @@ export function* addWidgetsToSection(
    * Can this be prevent during DnD itself? i.e. Don't show highlights for sections that can't handle so many zones.
    */
   const [zones, nonZones] = splitWidgets(draggedWidgets);
+  let itemsAdded = 0;
   /**
    * Step 2: Add zones to the section layout.
    */
@@ -173,13 +175,14 @@ export function* addWidgetsToSection(
       sectionProps,
       sectionLayout,
       sectionComp,
-      highlight,
+      { ...highlight, rowIndex: highlight.rowIndex + itemsAdded },
       zone,
     );
 
     sectionProps = res.canvasWidgets[sectionProps.widgetId];
     sectionLayout = res.section;
     canvasWidgets = res.canvasWidgets;
+    itemsAdded += 1;
   }
 
   /**
@@ -196,9 +199,10 @@ export function* addWidgetsToSection(
         createZoneAndAddWidgets,
         canvasWidgets,
         nonZones,
-        highlight,
+        { ...highlight, rowIndex: highlight.rowIndex + itemsAdded },
         sectionProps.widgetId,
       );
+
     sectionProps.children = [
       ...(sectionProps?.children || []),
       data.zone.widgetId,

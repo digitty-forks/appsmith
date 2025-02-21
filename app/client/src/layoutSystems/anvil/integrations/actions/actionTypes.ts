@@ -1,4 +1,4 @@
-import type { AnvilDragMeta } from "layoutSystems/anvil/canvasArenas/types";
+import type { AnvilDragMeta } from "layoutSystems/anvil/editor/canvasArenas/types";
 import type {
   AnvilHighlightInfo,
   DraggedWidget,
@@ -23,6 +23,7 @@ export interface AnvilNewWidgetsPayload {
     height: number;
     newWidgetId: string;
     type: string;
+    detachFromLayout: boolean;
   };
 }
 
@@ -37,4 +38,8 @@ export enum AnvilReduxActionTypes {
   ANVIL_SPACE_DISTRIBUTION_START = "ANVIL_SPACE_DISTRIBUTION_START",
   ANVIL_SPACE_DISTRIBUTION_UPDATE = "ANVIL_SPACE_DISTRIBUTION_UPDATE",
   ANVIL_SPACE_DISTRIBUTION_STOP = "ANVIL_SPACE_DISTRIBUTION_STOP",
+  ANVIL_SET_HIGHLIGHT_SHOWN = "ANVIL_SET_HIGHLIGHT_SHOWN",
+  ANVIL_WIDGET_SELECTION_CLICK = "ANVIL_WIDGET_SELECTION_CLICK",
+  // Until the IDE or Integrations Pod provides an API
+  DEBUG_WIDGET = "DEBUG_WIDGET",
 }

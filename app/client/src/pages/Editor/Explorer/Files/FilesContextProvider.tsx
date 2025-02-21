@@ -1,17 +1,17 @@
 import React, { createContext, useMemo } from "react";
-import type { ActionParentEntityTypeInterface } from "@appsmith/entities/Engine/actionHelpers";
+import type { ActionParentEntityTypeInterface } from "ee/entities/Engine/actionHelpers";
 
 export enum ActionEntityContextMenuItemsEnum {
-  EDIT_NAME = "Edit Name",
+  RENAME = "Rename",
   SHOW_BINDING = "Show Bindings",
+  CONVERT_QUERY_MODULE_INSTANCE = "Create Module",
   COPY = "Copy",
   MOVE = "Move",
   DELETE = "Delete",
-  CONVERT_QUERY_MODULE_INSTANCE = "Create Module",
 }
 
 export const defaultMenuItems = [
-  ActionEntityContextMenuItemsEnum.EDIT_NAME,
+  ActionEntityContextMenuItemsEnum.RENAME,
   ActionEntityContextMenuItemsEnum.DELETE,
   ActionEntityContextMenuItemsEnum.SHOW_BINDING,
   ActionEntityContextMenuItemsEnum.COPY,
@@ -26,6 +26,9 @@ interface FilesContextContextProps {
   parentEntityId: string; // page, workflow or module
   parentEntityType: ActionParentEntityTypeInterface;
   showModules?: boolean;
+  showWorkflows?: boolean;
+  // TODO: Fix this the next time the file is edited
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   selectFilesForExplorer?: (state: any) => any;
 }
 
@@ -51,6 +54,7 @@ export const FilesContextProvider = ({
   parentEntityType,
   selectFilesForExplorer,
   showModules,
+  showWorkflows,
 }: FilesContextProviderProps) => {
   const value = useMemo(() => {
     return {
@@ -61,6 +65,7 @@ export const FilesContextProvider = ({
       menuItems: menuItems || defaultMenuItems,
       selectFilesForExplorer,
       showModules,
+      showWorkflows,
     };
   }, [
     canCreateActions,
@@ -68,6 +73,7 @@ export const FilesContextProvider = ({
     parentEntityType,
     menuItems,
     showModules,
+    showWorkflows,
     selectFilesForExplorer,
     editorId,
   ]);

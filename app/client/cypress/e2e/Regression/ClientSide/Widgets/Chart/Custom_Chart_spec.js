@@ -1,13 +1,14 @@
-import { PageLeftPane } from "../../../../../support/Pages/EditorNavigation";
+import EditorNavigation, {
+  EntityType,
+} from "../../../../../support/Pages/EditorNavigation";
 
 const viewWidgetsPage = require("../../../../../locators/ViewWidgets.json");
 const widgetsPage = require("../../../../../locators/Widgets.json");
 import * as _ from "../../../../../support/Objects/ObjectsCore";
-import { featureFlagIntercept } from "../../../../../support/Objects/FeatureFlags";
 
 describe(
   "Chart Widget Functionality around custom chart feature",
-  { tags: ["@tag.Widget", "@tag.Chart"] },
+  { tags: ["@tag.Widget", "@tag.Chart", "@tag.Binding"] },
   function () {
     before(() => {
       _.agHelper.AddDsl("chartUpdatedDsl");
@@ -74,9 +75,6 @@ describe(
     it("2. Custom Chart Widget Functionality", function () {
       //changing the Chart type
       //cy.get(widgetsPage.toggleChartType).click({ force: true });
-      featureFlagIntercept({
-        deprecate_custom_fusioncharts_enabled: true,
-      });
       cy.UpdateChartType("Custom Fusion Charts (deprecated)");
 
       cy.testJsontext(
@@ -133,14 +131,16 @@ describe(
     it("4. Chart-Copy & Delete Verification", function () {
       //Copy Chart and verify all properties
       cy.wait(1000);
-      PageLeftPane.expandCollapseItem("Widgets");
-      PageLeftPane.expandCollapseItem("Container3");
+      EditorNavigation.SelectEntityByName("Test", EntityType.Widget, {}, [
+        "Container3",
+      ]);
       _.propPane.CopyPasteWidgetFromPropertyPane("Test");
       _.deployMode.DeployApp();
       //Chart-Delete Verification"
       _.deployMode.NavigateBacktoEditor();
-      PageLeftPane.expandCollapseItem("Widgets");
-      PageLeftPane.expandCollapseItem("Container3");
+      EditorNavigation.SelectEntityByName("TestCopy", EntityType.Widget, {}, [
+        "Container3",
+      ]);
       _.propPane.DeleteWidgetFromPropertyPane("TestCopy");
       _.deployMode.DeployApp();
       cy.get(viewWidgetsPage.chartWidget).should("not.exist");

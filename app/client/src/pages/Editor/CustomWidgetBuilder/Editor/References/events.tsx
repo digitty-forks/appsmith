@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useState } from "react";
 import styles from "./styles.module.css";
-import { Icon, Text } from "design-system";
+import { Icon, Text } from "@appsmith/ads";
 import {
   EditorModes,
   EditorSize,
@@ -10,10 +10,8 @@ import {
 import { CustomWidgetBuilderContext } from "../..";
 import LazyCodeEditor from "components/editorComponents/LazyCodeEditor";
 import styled from "styled-components";
-import {
-  CUSTOM_WIDGET_FEATURE,
-  createMessage,
-} from "@appsmith/constants/messages";
+import { CUSTOM_WIDGET_FEATURE, createMessage } from "ee/constants/messages";
+import AnalyticsUtil from "ee/utils/AnalyticsUtil";
 
 const StyledLazyCodeEditorWrapper = styled.div`
   .CodeMirror-line.CodeMirror-line {
@@ -31,11 +29,16 @@ const StyledLazyCodeEditorWrapper = styled.div`
 `;
 
 export default function Events() {
-  const { events } = useContext(CustomWidgetBuilderContext);
+  const { events, widgetId } = useContext(CustomWidgetBuilderContext);
 
   const [openState, setOpenState] = useState<Record<string, boolean>>({});
 
   const toggleOpen = useCallback((event: string) => {
+    AnalyticsUtil.logEvent("CUSTOM_WIDGET_BUILDER_REFERENCE_EVENT_OPENED", {
+      widgetId: widgetId,
+      eventName: event,
+    });
+
     setOpenState((prev) => {
       return {
         ...prev,

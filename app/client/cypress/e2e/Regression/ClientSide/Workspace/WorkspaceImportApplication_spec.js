@@ -3,7 +3,7 @@ import { agHelper, homePage } from "../../../../support/Objects/ObjectsCore";
 
 describe(
   "Workspace Import Application",
-  { tags: ["@tag.Workspace"] },
+  { tags: ["@tag.Workspace", "@tag.Sanity", "@tag.AccessControl"] },
   function () {
     let workspaceId;
     let newWorkspaceName;
@@ -45,9 +45,12 @@ describe(
               newWorkspaceName =
                 createWorkspaceInterception.response.body.data.name;
               homePage.RenameWorkspace(newWorkspaceName, workspaceId);
-              cy.get(homePageLocators.workspaceImportAppOption).click({
-                force: true,
-              });
+              agHelper.GetNClick(homePageLocators.createNew, 0, true);
+              agHelper.GetNClick(
+                homePageLocators.workspaceImportAppOption,
+                0,
+                true,
+              );
 
               cy.get(homePageLocators.workspaceImportAppModal).should(
                 "be.visible",
@@ -67,8 +70,10 @@ describe(
                   "contain",
                   "Application imported successfully",
                 );
-                cy.wait("@getPagesForCreateApp").then((interception) => {
-                  const pages = interception.response.body.data.pages;
+                agHelper.WaitUntilAllToastsDisappear();
+                cy.get("@getConsolidatedData").then((interception) => {
+                  const pages =
+                    interception.response.body.data.pages.data.pages;
                   const pageSlug =
                     pages.find((page) => page.isDefault)?.slug ?? "page";
                   cy.url().should(

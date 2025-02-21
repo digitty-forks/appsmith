@@ -12,7 +12,7 @@ import {
 
 describe(
   "List Widget V2 Functionality",
-  { tags: ["@tag.Widget", "@tag.List"] },
+  { tags: ["@tag.Widget", "@tag.List", "@tag.Binding"] },
   function () {
     before(() => {
       agHelper.AddDsl("Listv2/simpleLargeListv2");
@@ -63,12 +63,13 @@ describe(
       "should validate that all widgets can be added to List",
       { tags: ["@tag.excludeForAirgap"] },
       () => {
-        PageLeftPane.switchSegment(PagePaneSegment.Widgets);
+        PageLeftPane.switchSegment(PagePaneSegment.UI);
         allowed.forEach((widget) => {
           entityExplorer.DragDropWidgetNVerify(widget);
           //cy.dragAndDropToWidget(widget, "listwidgetv2", { x: 350, y: 50 });
           agHelper.GetNClick(propPane._deleteWidget);
-          cy.wait("@updateLayout");
+          agHelper.AssertAutoSave();
+          cy.wait(800);
         });
       },
     );
@@ -77,7 +78,7 @@ describe(
       "airgap",
       "should validate that all widgets can be added to List except mapwidget - airgap",
       () => {
-        PageLeftPane.switchSegment(PagePaneSegment.Widgets);
+        PageLeftPane.switchSegment(PagePaneSegment.UI);
         const airgapAllowed = allowed.filter(
           (widget) => widget !== "mapwidget",
         );
@@ -85,10 +86,11 @@ describe(
           entityExplorer.DragDropWidgetNVerify(widget);
 
           //cy.dragAndDropToWidget(widget, "listwidgetv2", { x: 350, y: 50 });
-          cy.assertPageSave();
+          agHelper.AssertAutoSave();
           cy.get(`.t--draggable-${widget}`).should("exist");
           cy.get(widgetsPage.removeWidget).click({ force: true });
-          cy.wait("@updateLayout");
+          agHelper.AssertAutoSave();
+          cy.wait(800);
         });
       },
     );

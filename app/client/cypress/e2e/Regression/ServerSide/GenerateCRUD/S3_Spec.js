@@ -6,19 +6,23 @@ const commonlocators = require("../../../../locators/commonlocators.json");
 
 import {
   agHelper,
+  assertHelper,
   dataSources,
   deployMode,
   homePage,
 } from "../../../../support/Objects/ObjectsCore";
+import EditorNavigation, {
+  EntityType,
+} from "../../../../support/Pages/EditorNavigation";
 
 describe(
   "Generate New CRUD Page Inside from entity explorer",
-  { tags: ["@tag.Datasource"] },
+  { tags: ["@tag.Datasource", "@tag.Git", "@tag.AccessControl"] },
   function () {
     let datasourceName;
 
     beforeEach(() => {
-      cy.startRoutesForDatasource();
+      dataSources.StartDataSourceRoutes();
       cy.startInterceptRoutesForS3();
     });
 
@@ -42,6 +46,7 @@ describe(
 
       //TestData & save datasource
       dataSources.TestSaveDatasource();
+      agHelper.WaitUntilAllToastsDisappear();
       // fetch bucket
       cy.wait("@getDatasourceStructure").should(
         "have.nested.property",
@@ -49,7 +54,7 @@ describe(
         200,
       );
 
-      agHelper.AssertContains("Generate from data");
+      agHelper.AssertContains("Generate a page based on your data");
       agHelper.GetNClick(generatePage.selectTableDropdown);
       agHelper.GetNClickByContains(
         generatePage.dropdownOption,
@@ -77,8 +82,7 @@ describe(
     });
 
     it("2. Generate CRUD page from datasource ACTIVE section", function () {
-      cy.NavigateToDSGeneratePage(datasourceName);
-
+      dataSources.GeneratePageForDS(datasourceName);
       // fetch bucket
       cy.wait("@getDatasourceStructure").should(
         "have.nested.property",
@@ -126,12 +130,12 @@ describe(
       cy.fillAmazonS3DatasourceForm();
 
       //TestData source
-      cy.get(".t--test-datasource").click();
-      cy.wait("@testDatasource");
+      dataSources.TestDatasource(true);
+      agHelper.WaitUntilAllToastsDisappear();
 
       //Save source
-      cy.get(".t--save-datasource").click();
-      cy.wait("@saveDatasource");
+      dataSources.SaveDatasource();
+      agHelper.WaitUntilAllToastsDisappear();
 
       //Verify page after save clicked
       // cy.get("@saveDatasource").then((httpResponse) => {
@@ -139,20 +143,10 @@ describe(
       // });
 
       //Create Dummy Page2 :
-      cy.CreatePage();
-      cy.wait("@createPage").should(
-        "have.nested.property",
-        "response.body.responseMeta.status",
-        201,
-      );
+      PageList.AddNewPage();
 
       //Creating CRUD Page3
-      cy.CreatePage();
-      cy.wait("@createPage").should(
-        "have.nested.property",
-        "response.body.responseMeta.status",
-        201,
-      );
+      PageList.AddNewPage();
 
       cy.get("@dSName").then((dbName) => {
         PageList.AddNewPage("Generate page with data");
@@ -197,10 +191,9 @@ describe(
       cy.get("span:contains('Got it')").click();
 
       //Bug verification starts
-      cy.CheckAndUnfoldEntityItem("Queries/JS");
-      cy.selectEntityByName("ListFiles");
+      EditorNavigation.SelectEntityByName("ListFiles", EntityType.Query);
       cy.wait(2000);
-      cy.selectEntityByName("Page3");
+      EditorNavigation.SelectEntityByName("Page3", EntityType.Page);
       cy.wait(1000);
       deployMode.DeployApp();
       cy.wait(3000);
@@ -225,7 +218,7 @@ describe(
     });
 
     it("4. Generate CRUD page from the page menu", function () {
-      cy.GenerateCRUD();
+      PageList.AddNewPage("Generate page with data");
       cy.NavigateToDSGeneratePage(datasourceName);
       // fetch bucket
       cy.wait("@getDatasourceStructure").should(

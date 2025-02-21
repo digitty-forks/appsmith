@@ -1,4 +1,7 @@
-import { PageLeftPane } from "../../../support/Pages/EditorNavigation";
+import {
+  PageLeftPane,
+  PagePaneSegment,
+} from "../../../support/Pages/EditorNavigation";
 
 const testdata = require("../../../fixtures/testdata.json");
 import {
@@ -11,7 +14,9 @@ import {
 
 describe(
   "Datasource form related tests",
-  { tags: ["@tag.Datasource", "@tag.Sanity"] },
+  {
+    tags: ["@tag.Datasource", "@tag.Sanity", "@tag.Git", "@tag.AccessControl"],
+  },
   function () {
     it("1. Check whether the number of key value pairs is equal to number of delete buttons", function () {
       apiPage.CreateAndFillApi(testdata.baseUrl + testdata.methods);
@@ -32,7 +37,7 @@ describe(
       dataSources.SaveDSFromDialog();
       //Check if saved api as a datasource does not fail on cloning", function () {
 
-      PageLeftPane.expandCollapseItem("Queries/JS");
+      PageLeftPane.switchSegment(PagePaneSegment.Queries);
       entityExplorer.ActionContextMenuByEntityName({
         entityNameinLeftSidebar: "Api1",
         action: "Copy to page",

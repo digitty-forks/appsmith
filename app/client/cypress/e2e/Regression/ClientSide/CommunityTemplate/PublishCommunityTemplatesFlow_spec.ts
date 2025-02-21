@@ -8,7 +8,15 @@ import {
 const communityForm = communityTemplates.locators._communityForm;
 describe(
   "Publish app to Community flow",
-  { tags: ["@tag.Templates", " @tag.excludeForAirgap"] },
+  {
+    tags: [
+      "@tag.Templates",
+      " @tag.excludeForAirgap",
+      "@tag.Git",
+      "@tag.ImportExport",
+      "@tag.Fork",
+    ],
+  },
   () => {
     afterEach(() => {
       agHelper.RefreshPage();
@@ -53,18 +61,18 @@ describe(
         communityForm.preview.name,
       );
       //Empty name should disable publish
-      agHelper.UpdateInputValue(communityForm.inputs.name, "");
+      agHelper.ClearNType(communityForm.inputs.name, "");
       communityTemplates.AssertPublishButtonState(true);
       //Update name input, updates preview
       const testName = "My first template";
-      agHelper.UpdateInputValue(communityForm.inputs.name, testName);
+      agHelper.ClearNType(communityForm.inputs.name, testName);
       communityTemplates.AssertInputValueToEqualPreviewValue(
         communityForm.inputs.name,
         communityForm.preview.name,
       );
       //Update excerpt input, updates preview
       const testExcerpt = "Small description of my template";
-      agHelper.UpdateInputValue(communityForm.inputs.excerpt, testExcerpt);
+      agHelper.ClearNType(communityForm.inputs.excerpt, testExcerpt);
       communityTemplates.AssertInputValueToEqualPreviewValue(
         communityForm.inputs.excerpt,
         communityForm.preview.excerpt,

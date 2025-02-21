@@ -10,7 +10,7 @@ import {
 
 describe(
   "Statbox Widget Functionality",
-  { tags: ["@tag.Widget", "@tag.Statbox"] },
+  { tags: ["@tag.Widget", "@tag.Statbox", "@tag.Binding"] },
   function () {
     before(() => {
       agHelper.AddDsl("dynamicHeightStatboxdsl");
@@ -24,7 +24,7 @@ describe(
         100,
         draggableWidgets.CONTAINER,
       );
-      PageLeftPane.switchSegment(PagePaneSegment.Explorer);
+      PageLeftPane.switchSegment(PagePaneSegment.UI);
       PageLeftPane.assertPresence("Statbox1");
       PageLeftPane.expandCollapseItem("Container1");
       PageLeftPane.assertPresence("Statbox2");

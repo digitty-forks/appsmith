@@ -8,14 +8,17 @@ import com.appsmith.server.ratelimiting.RateLimitService;
 import com.appsmith.server.repositories.DatasourceRepository;
 import com.appsmith.server.repositories.NewActionRepository;
 import com.appsmith.server.services.AnalyticsService;
+import com.appsmith.server.services.ConfigService;
 import com.appsmith.server.services.DatasourceContextService;
 import com.appsmith.server.services.FeatureFlagService;
+import com.appsmith.server.services.OrganizationService;
 import com.appsmith.server.services.SequenceService;
 import com.appsmith.server.services.SessionUserService;
 import com.appsmith.server.services.WorkspaceService;
 import com.appsmith.server.solutions.DatasourcePermission;
 import com.appsmith.server.solutions.EnvironmentPermission;
 import com.appsmith.server.solutions.WorkspacePermission;
+import io.micrometer.observation.ObservationRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -39,7 +42,10 @@ public class DatasourceServiceImpl extends DatasourceServiceCEImpl implements Da
             DatasourceStorageService datasourceStorageService,
             EnvironmentPermission environmentPermission,
             RateLimitService rateLimitService,
-            FeatureFlagService featureFlagService) {
+            FeatureFlagService featureFlagService,
+            ObservationRegistry observationRegistry,
+            OrganizationService organizationService,
+            ConfigService configService) {
 
         super(
                 repository,
@@ -57,6 +63,9 @@ public class DatasourceServiceImpl extends DatasourceServiceCEImpl implements Da
                 datasourceStorageService,
                 environmentPermission,
                 rateLimitService,
-                featureFlagService);
+                featureFlagService,
+                observationRegistry,
+                organizationService,
+                configService);
     }
 }

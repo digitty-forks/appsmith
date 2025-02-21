@@ -5,7 +5,7 @@ import * as _ from "../../../../../support/Objects/ObjectsCore";
 
 describe(
   "Checkbox Widget Functionality",
-  { tags: ["@tag.Widget", "@tag.Form"] },
+  { tags: ["@tag.Widget", "@tag.Form", "@tag.Binding"] },
   function () {
     before(() => {
       _.agHelper.AddDsl("formWidgetdsl");
@@ -13,7 +13,7 @@ describe(
 
     it("1. Checkbox Functionality To Check required toggle for form", function () {
       cy.openPropertyPane("checkboxwidget");
-      cy.togglebar(commonlocators.requiredjs + " " + "input");
+      _.agHelper.CheckUncheck(commonlocators.requiredjs + " " + "input");
       _.deployMode.DeployApp();
       cy.wait(2000);
       cy.get(publish.checkboxWidget).click();

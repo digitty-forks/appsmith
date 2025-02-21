@@ -1,19 +1,21 @@
 const datasource = require("../../../locators/DatasourcesEditor.json");
-import { dataSources } from "../../../support/Objects/ObjectsCore";
+import { agHelper, dataSources } from "../../../support/Objects/ObjectsCore";
 
 let datasourceName;
 
 describe(
   "MySQL datasource test cases",
-  { tags: ["@tag.Datasource", "@tag.Sanity"] },
+  {
+    tags: ["@tag.Datasource", "@tag.Sanity", "@tag.Git", "@tag.AccessControl"],
+  },
   function () {
     beforeEach(() => {
-      cy.startRoutesForDatasource();
+      dataSources.StartDataSourceRoutes();
     });
 
     it("1. Create, test, save then delete a MySQL datasource", function () {
       cy.NavigateToDatasourceEditor();
-      cy.get(datasource.MySQL).click();
+      agHelper.GetNClick(datasource.MySQL);
       cy.fillMySQLDatasourceForm();
       cy.generateUUID().then((UUID) => {
         datasourceName = `MySQL MOCKDS ${UUID}`;
@@ -25,7 +27,7 @@ describe(
 
     it("2. Create with trailing white spaces in host address and database name, test, save then delete a MySQL datasource", function () {
       cy.NavigateToDatasourceEditor();
-      cy.get(datasource.MySQL).click();
+      agHelper.GetNClick(datasource.MySQL);
       cy.fillMySQLDatasourceForm(true);
       cy.generateUUID().then((UUID) => {
         datasourceName = `MySQL MOCKDS ${UUID}`;
@@ -44,6 +46,13 @@ describe(
       );
       cy.deleteQueryUsingContext();
       cy.deleteDatasource(datasourceName);
+    });
+
+    it("4. Verify the default port for the datasource", function () {
+      dataSources.NavigateToDSCreateNew();
+      dataSources.CreatePlugIn("MySQL");
+
+      agHelper.AssertAttribute(dataSources._port, "value", "3306");
     });
   },
 );

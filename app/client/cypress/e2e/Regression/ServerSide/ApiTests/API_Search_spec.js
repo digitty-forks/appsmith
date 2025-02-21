@@ -3,6 +3,7 @@ import {
   entityExplorer,
   apiPage,
   entityItems,
+  dataSources,
 } from "../../../../support/Objects/ObjectsCore";
 import {
   AppSidebar,
@@ -10,7 +11,8 @@ import {
   PageLeftPane,
 } from "../../../../support/Pages/EditorNavigation";
 
-let APIName;
+import BottomTabs from "../../../../support/Pages/IDE/BottomTabs";
+
 const testUrl1 =
   "http://host.docker.internal:5001/v1/dynamicrecords/generaterecords?records=10";
 const testUrl2 =
@@ -20,7 +22,7 @@ const testUrl3 =
 
 describe(
   "API Panel Test Functionality ",
-  { tags: ["@tag.Datasource"] },
+  { tags: ["@tag.Datasource", "@tag.Git", "@tag.AccessControl"] },
   function () {
     it("1. Test Search API fetaure", function () {
       cy.log("Login Successful");
@@ -30,7 +32,6 @@ describe(
         cy.log("Creation of FirstAPI Action successful");
         AppSidebar.navigate(AppSidebarButton.Editor);
         cy.CreateAPI(`SecondAPI_${uid}`);
-        cy.CheckAndUnfoldEntityItem("Queries/JS");
         cy.log("Creation of SecondAPI Action successful");
         PageLeftPane.assertPresence(`FirstAPI_${uid}`);
         PageLeftPane.assertPresence(`SecondAPI_${uid}`);
@@ -53,12 +54,12 @@ describe(
       cy.RunAPI();
       apiPage.CreateAndFillApi(testUrl2);
       cy.RunAPI();
-      cy.get(ApiEditor.jsonResponseTab).click();
-      cy.checkIfApiPaneIsVisible();
-      cy.get(ApiEditor.rawResponseTab).click();
-      cy.checkIfApiPaneIsVisible();
-      cy.get(ApiEditor.tableResponseTab).click();
-      cy.checkIfApiPaneIsVisible();
+      BottomTabs.response.selectResponseResponseTypeFromMenu("JSON");
+      dataSources.AssertBindDataVisible();
+      BottomTabs.response.selectResponseResponseTypeFromMenu("RAW");
+      dataSources.AssertBindDataVisible();
+      BottomTabs.response.selectResponseResponseTypeFromMenu("TABLE");
+      dataSources.AssertBindDataVisible();
     });
 
     it("3. Bug 14242: Appsmith crash when create an API pointing to Github hosted json", function () {

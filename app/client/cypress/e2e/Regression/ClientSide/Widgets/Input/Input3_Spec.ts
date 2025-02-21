@@ -13,10 +13,10 @@ import EditorNavigation, {
 
 describe(
   "InputV2 widget tests - continuation",
-  { tags: ["@tag.Widget", "@tag.Input"] },
+  { tags: ["@tag.Widget", "@tag.Input", "@tag.Binding"] },
   function () {
     before(() => {
-      entityExplorer.DragNDropWidget(draggableWidgets.INPUT_V2);
+      entityExplorer.DragDropWidgetNVerify(draggableWidgets.INPUT_V2);
     });
 
     it("1. Validate Required field", function () {

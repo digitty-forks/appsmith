@@ -1,6 +1,4 @@
 import * as _ from "../../../../../support/Objects/ObjectsCore";
-const explorer = require("../../../../../locators/explorerlocators.json");
-const widgetsPage = require("../../../../../locators/Widgets.json");
 
 const defaultValue = `
         {
@@ -11,7 +9,7 @@ const defaultValue = `
 
 describe(
   "Select Widget Functionality",
-  { tags: ["@tag.Widget", "@tag.Select"] },
+  { tags: ["@tag.Widget", "@tag.Select", "@tag.Sanity", "@tag.Binding"] },
   function () {
     before(() => {
       _.agHelper.AddDsl("emptyDSL");
@@ -20,7 +18,6 @@ describe(
       cy.wait(2000);
     });
     it("Add new Select widget", () => {
-      cy.get(explorer.addWidget).click();
       cy.dragAndDropToCanvas("selectwidget", { x: 300, y: 300 });
       cy.get(".t--widget-selectwidget").should("exist");
       _.propPane.ToggleJSMode("sourcedata");

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import type { ContentProps } from "./types";
 import styles from "./styles.module.css";
 import {
@@ -15,41 +15,51 @@ import { getAppsmithScriptSchema } from "widgets/CustomWidget/component/constant
 // import { PropertyEvaluationErrorType } from "utils/DynamicBindingUtils";
 // import { Severity } from "entities/AppsmithConsole";
 import CodemirrorTernService from "utils/autocomplete/CodemirrorTernService";
-import { Spinner } from "design-system";
-import {
-  CUSTOM_WIDGET_FEATURE,
-  createMessage,
-} from "@appsmith/constants/messages";
+import { Spinner } from "@appsmith/ads";
+import { CUSTOM_WIDGET_FEATURE, createMessage } from "ee/constants/messages";
+import { DebuggerLogType } from "../../types";
+import type { LintError } from "utils/DynamicBindingUtils";
+import { PropertyEvaluationErrorType } from "utils/DynamicBindingUtils";
+import { Severity } from "entities/AppsmithConsole";
+import { isUndefined } from "lodash";
 
 export default function JSEditor(props: ContentProps) {
   const [loading, setLoading] = useState(true);
 
-  const { model, showConnectionLostMessage, uncompiledSrcDoc, update } =
-    useContext(CustomWidgetBuilderContext);
+  const {
+    debuggerLogs,
+    model,
+    showConnectionLostMessage,
+    uncompiledSrcDoc,
+    update,
+  } = useContext(CustomWidgetBuilderContext);
 
   const { height } = props;
 
-  // const errors = useMemo(() => {
-  //   return debuggerLogs
-  //     ?.filter(d => d.type === DebuggerLogType.ERROR)
-  //     .map((d) => d.args)
-  //     .flat()
-  //     .map((d) => ({
-  //       errorType: PropertyEvaluationErrorType.LINT,
-  //       raw: uncompiledSrcDoc?.js,
-  //       severity: Severity.ERROR,
-  //       errorMessage: {
-  //         name: "LintingError",
-  //         message: d.message,
-  //       },
-  //       errorSegment:uncompiledSrcDoc?.js,
-  //       originalBinding: uncompiledSrcDoc?.js,
-  //       variables: [],
-  //       code: "",
-  //       line: d.line,
-  //       ch: d.column,
-  //     }));
-  // }, [debuggerLogs]);
+  const errors: LintError[] = useMemo(() => {
+    return debuggerLogs
+      ? debuggerLogs
+          .filter((d) => d.type === DebuggerLogType.ERROR)
+          .map((d) => d.args)
+          .flat()
+          .filter((d) => !isUndefined(d.line) && !isUndefined(d.column))
+          .map((d) => ({
+            errorType: PropertyEvaluationErrorType.LINT,
+            raw: uncompiledSrcDoc?.js || "",
+            severity: Severity.ERROR,
+            errorMessage: {
+              name: "LintingError",
+              message: d.message as string,
+            },
+            errorSegment: uncompiledSrcDoc?.js || "",
+            originalBinding: uncompiledSrcDoc?.js || "",
+            variables: [],
+            code: "",
+            line: d.line ? d.line - 1 : 1,
+            ch: d.column ? d.column + 2 : 1,
+          }))
+      : [];
+  }, [debuggerLogs]);
 
   useEffect(() => {
     ["LIB/node-forge", "LIB/moment", "base64-js", "LIB/lodash"].forEach((d) => {
@@ -64,6 +74,8 @@ export default function JSEditor(props: ContentProps) {
         border={CodeEditorBorder.NONE}
         borderLess
         className={"js-editor"}
+        customErrors={errors}
+        dataTreePath={"customwidget.js"}
         disabled={showConnectionLostMessage}
         focusElementName="custom-widget-js-editor"
         folding

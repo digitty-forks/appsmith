@@ -1,48 +1,52 @@
 import React from "react";
 import type { ControlProps } from "./BaseControl";
 import BaseControl from "./BaseControl";
-import { NumberInput } from "design-system";
+import { NumberInput } from "@appsmith/ads";
 import type { DSEventDetail } from "utils/AppsmithUtils";
 import {
   DSEventTypes,
   DS_EVENT,
   emitInteractionAnalyticsEvent,
 } from "utils/AppsmithUtils";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { updateZoneCountAction } from "layoutSystems/anvil/integrations/actions/sectionActions";
 import {
   MAX_ZONE_COUNT,
   MIN_ZONE_COUNT,
 } from "layoutSystems/anvil/utils/constants";
+import type { AppState } from "ee/reducers";
 
 const ZoneNumInput = React.forwardRef(
   (
     {
       max,
       min,
+      sectionWidgetId,
       steps,
-      widgetId,
-      zoneCount,
     }: {
-      widgetId: string;
+      sectionWidgetId: string;
       max: number;
       min: number;
       steps: number;
-      zoneCount: any;
     },
     ref: React.Ref<HTMLInputElement>,
   ) => {
     const dispatch = useDispatch();
+    const zoneCount = useSelector((state: AppState) => {
+      const sectionWidget = state.entities.canvasWidgets[sectionWidgetId];
 
+      return sectionWidget && sectionWidget.zoneCount;
+    });
     // Handling onChange event for the NumberInput
     const handleInputChange = (value: string | undefined) => {
       const v = value ? parseFloat(value.replace(/[^0-9.-]+/g, "")) : 0;
+
       if (v === zoneCount) {
         return;
       }
 
       // Dispatching an action to update the zone count
-      dispatch(updateZoneCountAction(widgetId, v));
+      dispatch(updateZoneCountAction(sectionWidgetId, v));
     };
 
     return (
@@ -101,14 +105,14 @@ class ZoneStepperControl extends BaseControl<ZoneStepperControlProps> {
 
   render() {
     const { max, min, steps } = this.getStepTypeControls();
+
     return (
       <ZoneNumInput
         max={max}
         min={min}
         ref={this.componentRef}
+        sectionWidgetId={this.props.propertyValue}
         steps={steps}
-        widgetId={this.props.widgetProperties.widgetId}
-        zoneCount={this.props.propertyValue}
       />
     );
   }
@@ -120,9 +124,12 @@ class ZoneStepperControl extends BaseControl<ZoneStepperControlProps> {
   // Static method to check if the value can be displayed in UI
   static canDisplayValueInUI(
     config: ZoneStepperControlProps,
+    // TODO: Fix this the next time the file is edited
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: any,
   ): boolean {
     const steps = 1;
+
     return (
       value >= MIN_ZONE_COUNT && value <= MAX_ZONE_COUNT && value % steps === 0
     );

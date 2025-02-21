@@ -14,10 +14,10 @@ import EditorNavigation, {
 
 describe(
   "Text widget tests",
-  { tags: ["@tag.Widget", "@tag.Text"] },
+  { tags: ["@tag.Widget", "@tag.Text", "@tag.Binding"] },
   function () {
     before(() => {
-      entityExplorer.DragNDropWidget(draggableWidgets.TEXT);
+      entityExplorer.DragDropWidgetNVerify(draggableWidgets.TEXT);
     });
 
     it("1. Validate binding text widget to checkbox and using HTML in Text", () => {
@@ -41,7 +41,11 @@ describe(
       deployMode.NavigateBacktoEditor();
       EditorNavigation.SelectEntityByName("Text1", EntityType.Widget);
       propPane.UpdatePropertyFieldValue("Text", "{{CheckboxGroup1.options}}");
-      entityExplorer.DragNDropWidget(draggableWidgets.CHECKBOXGROUP, 300, 450);
+      entityExplorer.DragDropWidgetNVerify(
+        draggableWidgets.CHECKBOXGROUP,
+        300,
+        450,
+      );
       deployMode.DeployApp(locators._widgetInDeployed(draggableWidgets.TEXT));
       agHelper.AssertText(
         locators._widgetInDeployed(draggableWidgets.TEXT),

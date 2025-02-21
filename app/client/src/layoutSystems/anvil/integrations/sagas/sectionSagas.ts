@@ -1,9 +1,7 @@
-import {
-  ReduxActionErrorTypes,
-  type ReduxAction,
-} from "@appsmith/constants/ReduxActionConstants";
+import { ReduxActionErrorTypes } from "ee/constants/ReduxActionConstants";
+import { type ReduxAction } from "actions/ReduxActionTypes";
 import { updateAndSaveLayout } from "actions/pageActions";
-import type { CanvasWidgetsReduxState } from "reducers/entityReducers/canvasWidgetsReducer";
+import type { CanvasWidgetsReduxState } from "ee/reducers/entityReducers/canvasWidgetsReducer";
 import { all, call, put, select, takeLatest } from "redux-saga/effects";
 import { getWidgets } from "sagas/selectors";
 import type { FlattenedWidgetProps } from "WidgetProvider/constants";
@@ -11,7 +9,6 @@ import { AnvilReduxActionTypes } from "../actions/actionTypes";
 import {
   MAX_ZONE_COUNT,
   MIN_ZONE_COUNT,
-  ZoneMinColumnWidth,
 } from "layoutSystems/anvil/utils/constants";
 import {
   addNewZonesToSection,
@@ -21,7 +18,8 @@ import type { WidgetLayoutProps } from "layoutSystems/anvil/utils/anvilTypes";
 import {
   getDefaultSpaceDistributed,
   redistributeSpaceWithDynamicMinWidth,
-} from "layoutSystems/anvil/sectionSpaceDistributor/spaceRedistributionUtils";
+} from "layoutSystems/anvil/sectionSpaceDistributor/utils/spaceRedistributionSagaUtils";
+import { ZoneMinColumnWidth } from "layoutSystems/anvil/sectionSpaceDistributor/constants";
 
 // function to update the zone count of a section widget
 function* updateZonesCountOfSectionSaga(
@@ -45,6 +43,8 @@ function* updateZonesCountOfSectionSaga(
       if (sectionWidget && sectionWidget.children) {
         // Determine the current zones' order within the section
         const zoneOrder: string[] = sectionWidget.layout[0].layout.map(
+          // TODO: Fix this the next time the file is edited
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (each: any) => each.widgetId,
         );
 
@@ -69,6 +69,7 @@ function* updateZonesCountOfSectionSaga(
             sectionWidgetId,
             zoneCount - currentZoneCount,
           );
+
           updatedWidgets = updatedObj.updatedWidgets;
         }
 
@@ -94,7 +95,9 @@ function* updateZonesCountOfSectionSaga(
             currentZoneCount > zoneCount
               ? currentZoneCount - 1
               : currentZoneCount,
-            true,
+            {
+              addedViaStepper: true,
+            },
           );
 
         // Update space distribution for each child widget
@@ -110,6 +113,7 @@ function* updateZonesCountOfSectionSaga(
 
         // Update each child widget's flexGrow property based on the redistributed space
         const childrenToUpdate = updatedWidgets[sectionWidgetId].children || [];
+
         childrenToUpdate.forEach((each) => {
           updatedWidgets[each] = {
             ...updatedWidgets[each],

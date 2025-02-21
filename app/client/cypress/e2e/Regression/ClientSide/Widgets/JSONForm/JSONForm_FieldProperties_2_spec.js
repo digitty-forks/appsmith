@@ -3,6 +3,8 @@ import EditorNavigation, {
 } from "../../../../../support/Pages/EditorNavigation";
 
 const commonlocators = require("../../../../../locators/commonlocators.json");
+const widgetsLocators = require("../../../../../locators/Widgets.json");
+
 import {
   agHelper,
   entityExplorer,
@@ -15,7 +17,7 @@ const fieldPrefix = ".t--jsonformfield";
 
 describe(
   "Text Field Property Control",
-  { tags: ["@tag.Widget", "@tag.JSONForm"] },
+  { tags: ["@tag.Widget", "@tag.JSONForm", "@tag.Binding"] },
   () => {
     beforeEach(() => {
       agHelper.RestoreLocalStorageCache();
@@ -113,7 +115,7 @@ describe(
       cy.get(`.bp3-select-popover .bp3-input-group`).should("not.exist");
 
       // toggle filterable -> true in property pane
-      cy.togglebar(`.t--property-control-allowsearching input`);
+      agHelper.CheckUncheck(commonlocators.allowsearchingInput);
 
       deployMode.DeployApp();
 
@@ -192,10 +194,10 @@ describe(
       cy.get(`${fieldPrefix}-radio input`).should("have.value", "Y");
 
       // hides field when visible switched off"
-      cy.togglebarDisable(`.t--property-control-visible input`);
+      agHelper.CheckUncheck(widgetsLocators.visible, false);
       cy.get(`${fieldPrefix}-radio`).should("not.exist");
       cy.wait(500);
-      cy.togglebar(`.t--property-control-visible input`);
+      agHelper.CheckUncheck(widgetsLocators.visible);
       cy.get(`${fieldPrefix}-radio`).should("exist");
     });
   },
